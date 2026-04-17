@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard | PUP MOA Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>Review Console</h2>
+                    <p>Approve MOA submissions, manage requirements, and export records.</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="{{ url_for('main.student_portal') }}">Student Portal</a>
+                <a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('main.admin_logout') }}">Logout</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Current Totals</h3>
+                <ul class="dashboard-metrics">
+                    <li><strong>{{ totals.pending }}</strong><span>Pending</span></li>
+                    <li><strong>{{ totals.incomplete }}</strong><span>Incomplete</span></li>
+                    <li><strong>{{ totals.approved }}</strong><span>Approved</span></li>
+                </ul>
+            </div>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                        </div>
+                        <div>
+                            <p class="brand-caption">Admin Dashboard</p>
+                            <h1>Review Student Submissions</h1>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
+                    </div>
+                </div>
+                <p class="site-intro">Manage all submissions, update statuses, and export approved records.</p>
+            </header>
+
+            <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages">
+                        {% for category, message in messages %}
+                            <div class="message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <section class="panel">
+                <div class="panel-header panel-header-with-search">
+                    <div>
+                        <h2>Review Queue</h2>
+                        <p>All student submissions are visible here with status and requirement progress.</p>
+                        {% if search_term %}
+                            <p class="search-meta">Results for "{{ search_term }}".</p>
+                        {% endif %}
+                    </div>
+                    <div class="panel-actions">
+                        <form method="get" class="search-form" action="{{ url_for('main.admin_dashboard') }}">
+                            <input type="search" name="search" placeholder="Search student name..." value="{{ search_term }}" aria-label="Search student name" />
+                            <button type="submit">Search</button>
+                        </form>
+                        <a class="download-button" href="{{ url_for('main.admin_download_report') }}">Download CSV</a>
+                        <a class="download-button" href="{{ url_for('main.export_approved') }}">Export Approved</a>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Year / Section</th>
+                                <th>Status</th>
+                                <th>Complete</th>
+                                <th>Days Left</th>
+                                <th>Attachments</th>
+                                <th>Missing Items</th>
+                                <th>Review</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr class="{% if record.status == 'Incomplete' %}expired{% elif record.status == 'Pending' %}expiring{% endif %}">
+                                    <td>{{ record.name }}</td>
+                                    <td>{{ record.display_year_section }}</td>
+                                    <td>{{ record.status }}</td>
+                                    <td>{{ 'Yes' if record.is_complete else 'No' }}</td>
+                                    <td>{{ record.days_left }}</td>
+                                    <td>{{ record.attachment_items | length }}</td>
+                                    <td>{{ record.missing_requirements | join(', ') }}</td>
+                                    <td class="row-actions">
+                                        <a class="edit-link" href="{{ url_for('main.admin_edit', record_id=record.id) }}">Edit</a>
+                                        <form method="post" action="{{ url_for('main.admin_delete', record_id=record.id) }}" onsubmit="return confirm('Delete this submission?');">
+                                            <button class="delete-button" type="submit">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel help-panel">
+                <h2>Overview</h2>
+                <ul>
+                    <li>Pending: {{ totals.pending }}</li>
+                    <li>Incomplete: {{ totals.incomplete }}</li>
+                    <li>Approved: {{ totals.approved }}</li>
+                </ul>
+            </section>
+        </main>
+        </div>
+    </div>
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('moa-theme');
+        const body = document.body;
+
+        if (currentTheme === 'dark') {
+            body.classList.add('dark-mode');
+            toggle.textContent = 'Light Mode';
+        } else {
+            body.classList.remove('dark-mode');
+            toggle.textContent = 'Dark Mode';
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const enabled = body.classList.toggle('dark-mode');
+                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
+                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+    </script>
+</body>
+</html>

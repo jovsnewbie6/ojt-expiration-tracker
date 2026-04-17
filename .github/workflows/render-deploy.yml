@@ -1,0 +1,31 @@
+name: CI and Render Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run syntax check
+        run: python -m py_compile app.py app/__init__.py app/routes.py app/models.py
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Render
+        run: |
+          echo "Render deployment is configured via render.yaml."
+          echo "Connect your GitHub repo to Render and use this file for automated deployment."

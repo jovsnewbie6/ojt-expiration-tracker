@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OJT MOA Expiration Tracker</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <div class="site-shell">
+        <header class="site-header">
+            <div class="header-top">
+                <div class="brand">
+                    <div class="brand-logo">PUP</div>
+                    <div>
+                        <p class="brand-caption">Polytechnic University of the Philippines</p>
+                        <h1>OJT MOA Expiration Tracker</h1>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <nav class="top-nav">
+                        <a href="#">Home</a>
+                        <a href="#form-section">Record</a>
+                        <a href="#list-section">Records</a>
+                        <a href="#help-section">Help</a>
+                    </nav>
+                    <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
+                </div>
+            </div>
+            <p class="site-intro">Track student MOA expiration dates easily with clear course and year selection.</p>
+        </header>
+
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages">
+                        {% for category, message in messages %}
+                            <div class="message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <section id="form-section" class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>{{ "Update Expiration Record" if edit_record else "New Expiration Record" }}</h2>
+                        <p>Add student information and MOA expiry details below.</p>
+                    </div>
+                    <span class="badge">{{ "Editing" if edit_record else "New Entry" }}</span>
+                </div>
+
+                <form method="post" class="tracker-form" action="{{ form_action }}">
+                    <div class="form-grid">
+                        <label>
+                            <span>Student Name</span>
+                            <input id="name" name="name" type="text" placeholder="Enter student name" value="{{ edit_record.name if edit_record else '' }}" />
+                        </label>
+                        <label>
+                            <span>Course</span>
+                            <select id="course" name="course">
+                                <option value="">Select course</option>
+                                {% for course in courses %}
+                                    <option value="{{ course }}" {% if edit_record and edit_record.course == course %}selected{% endif %}>{{ course }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>College Year</span>
+                            <select id="college_year" name="college_year">
+                                <option value="">Select year</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}" {% if edit_record and edit_record.college_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Section</span>
+                            <input id="section" name="section" type="text" placeholder="Enter section e.g. 3-1 DIT" value="{{ edit_record.section if edit_record else '' }}" />
+                        </label>
+                        <label>
+                            <span>Expiration Date</span>
+                            <input id="expiration_date" name="expiration_date" type="date" value="{{ edit_record.expiration_date.strftime('%Y-%m-%d') if edit_record else '' }}" />
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">{{ "Update Record" if edit_record else "Save Record" }}</button>
+                        {% if edit_record %}
+                            <a class="cancel-button" href="{{ url_for('index') }}">Cancel</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </section>
+
+            <section id="list-section" class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Expiration Records</h2>
+                        <p>See the current MOA expirations and identify which entries are expired or expiring soon.</p>
+                    </div>
+                    <div class="panel-actions">
+                        <a class="download-button" href="{{ url_for('download_report') }}">Download Report</a>
+                        <span class="badge">Total {{ records | length }}</span>
+                    </div>
+                </div>
+
+                {% if records %}
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Year</th>
+                                    <th>Section</th>
+                                    <th>Expiration Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                    <tr class="{% if record.expired %}expired{% elif record.days_left <= 30 %}expiring{% endif %}">
+                                        <td>{{ record.name }}</td>
+                                        <td>{{ record.course }}</td>
+                                        <td>{{ record.college_year }}</td>
+                                        <td>{{ record.section }}</td>
+                                        <td>{{ record.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if record.expired %}
+                                                Expired
+                                            {% elif record.days_left <= 30 %}
+                                                Expires Soon
+                                            {% else %}
+                                                Active
+                                            {% endif %}
+                                        </td>
+                                        <td class="action-column">
+                                            <a class="edit-link" href="{{ url_for('edit_record', record_id=record.id) }}">Edit</a>
+                                            <form action="{{ url_for('delete_record', record_id=record.id) }}" method="post" class="action-form">
+                                                <button type="submit" class="delete-button">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="empty-state">No expiration records yet. Add one above to begin tracking.</p>
+                {% endif %}
+            </section>
+
+            <section id="help-section" class="panel help-panel">
+                <h2>How to use</h2>
+                <ul>
+                    <li>Enter the student name.</li>
+                    <li>Provide the section and course together, for example <strong>3-3 DIT</strong>.</li>
+                    <li>Set the MOA expiration date.</li>
+                    <li>Click Save Record to add the entry to the list.</li>
+                    <li>Expired records are marked for quick review.</li>
+                </ul>
+                <div class="requirements">
+                    <h3>OJT Requirements</h3>
+                    <ul>
+                        <li>MOA</li>
+                        <li>Internship Agreement</li>
+                        <li>Consent Form</li>
+                        <li>Medical Clearance</li>
+                        <li>Insurance</li>
+                        <li>Intent Letter</li>
+                        <li>Endorsement Letter</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('moa-theme');
+        const body = document.body;
+
+        if (currentTheme === 'dark') {
+            body.classList.add('dark-mode');
+            toggle.textContent = 'Light Mode';
+        } else {
+            body.classList.remove('dark-mode');
+            toggle.textContent = 'Dark Mode';
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const enabled = body.classList.toggle('dark-mode');
+                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
+                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+    </script>
+</body>
+</html>

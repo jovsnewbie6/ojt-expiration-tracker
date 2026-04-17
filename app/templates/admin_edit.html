@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Submission | PUP MOA Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="{{ url_for('static', filename='pup-logo.png') }}" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>Edit Review</h2>
+                    <p>Update the submission details, status, and requirement checklist here.</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('main.admin_logout') }}">Logout</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Review Notes</h3>
+                <p>Only change the year/section if the student’s record was entered incorrectly.</p>
+            </div>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                        </div>
+                        <div>
+                            <p class="brand-caption">Admin Review</p>
+                            <h1>Edit Submission</h1>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
+                    </div>
+                </div>
+                <p class="site-intro">Update status, requirements, and expiration details for this submission.</p>
+            </header>
+
+            <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages">
+                        {% for category, message in messages %}
+                            <div class="message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Review #{{ record.id }}</h2>
+                        <p>Change status, verify requirements, and keep the submission accurate.</p>
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" class="tracker-form" action="{{ url_for('main.admin_edit', record_id=record.id) }}">
+                    <div class="form-grid">
+                        <label>
+                            <span>Student Name</span>
+                            <input id="name" name="name" type="text" value="{{ record.name }}" required />
+                        </label>
+                        <label>
+                            <span>Year / Section</span>
+                            <input id="year_section" name="year_section" type="text" value="{{ record.display_year_section }}" required />
+                        </label>
+                        <label>
+                            <span>Company Name</span>
+                            <input id="company_name" name="company_name" type="text" value="{{ record.company_name }}" required />
+                        </label>
+                        <label>
+                            <span>Nature of Business</span>
+                            <input id="business_nature" name="business_nature" type="text" value="{{ record.business_nature }}" required />
+                        </label>
+                        <label>
+                            <span>MOA Validity</span>
+                            <input id="validity" name="validity" type="text" value="{{ record.validity }}" required />
+                        </label>
+                        <label>
+                            <span>Date Notarized</span>
+                            <input id="notarized_date" name="notarized_date" type="date" value="{{ record.notarized_date.strftime('%Y-%m-%d') if record.notarized_date else '' }}" />
+                        </label>
+                        <label>
+                            <span>Upload Additional Attachments</span>
+                            <input id="attachments" name="attachments" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
+                        </label>
+                        <label>
+                            <span>Expiration Date</span>
+                            <input id="expiration_date" name="expiration_date" type="date" value="{{ record.expiration_date.strftime('%Y-%m-%d') }}" required />
+                        </label>
+                        {% if record.attachment_items %}
+                            <div class="attachment-list admin-attachments">
+                                <strong>Existing Attachments</strong>
+                                <ul>
+                                    {% for file in record.attachment_items %}
+                                        <li><a href="{{ url_for('main.attachment_download', record_id=record.id, filename=file.filename) }}" target="_blank">{{ file.original }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <label>
+                            <span>Status</span>
+                            <select id="status" name="status" required>
+                                <option value="Pending" {% if record.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                <option value="Incomplete" {% if record.status == 'Incomplete' %}selected{% endif %}>Incomplete</option>
+                                <option value="Approved" {% if record.status == 'Approved' %}selected{% endif %}>Approved</option>
+                            </select>
+                        </label>
+                        <label class="checkbox-field">
+                            <span>Resume</span>
+                            <input type="checkbox" id="has_resume" name="has_resume" {% if record.has_resume %}checked{% endif %} />
+                        </label>
+                        <label class="checkbox-field">
+                            <span>Medical Certificate</span>
+                            <input type="checkbox" id="has_med_cert" name="has_med_cert" {% if record.has_med_cert %}checked{% endif %} />
+                        </label>
+                        <label class="checkbox-field">
+                            <span>Consent Form</span>
+                            <input type="checkbox" id="has_consent_form" name="has_consent_form" {% if record.has_consent_form %}checked{% endif %} />
+                        </label>
+                        <label class="checkbox-field">
+                            <span>MOA</span>
+                            <input type="checkbox" id="has_moa" name="has_moa" {% if record.has_moa %}checked{% endif %} />
+                        </label>
+                        <label class="checkbox-field">
+                            <span>Insurance</span>
+                            <input type="checkbox" id="has_insurance" name="has_insurance" {% if record.has_insurance %}checked{% endif %} />
+                        </label>
+                        <label class="checkbox-field">
+                            <span>Intent Letter</span>
+                            <input type="checkbox" id="has_intent_letter" name="has_intent_letter" {% if record.has_intent_letter %}checked{% endif %} />
+                        </label>
+                        <label class="checkbox-field">
+                            <span>Endorsement Letter</span>
+                            <input type="checkbox" id="has_endorsement_letter" name="has_endorsement_letter" {% if record.has_endorsement_letter %}checked{% endif %} />
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Save Changes</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+        </div>
+    </div>
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('moa-theme');
+        const body = document.body;
+
+        if (currentTheme === 'dark') {
+            body.classList.add('dark-mode');
+            toggle.textContent = 'Light Mode';
+        } else {
+            body.classList.remove('dark-mode');
+            toggle.textContent = 'Dark Mode';
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const enabled = body.classList.toggle('dark-mode');
+                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
+                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+    </script>
+</body>
+</html>

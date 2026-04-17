@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PUP Student Submission Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>MOA Tracker</h2>
+                    <p>Submit MOA details and track review progress with a cleaner dashboard experience.</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="#submission-section">Submit MOA</a>
+                <a href="#status-section">View Status</a>
+                <a href="#help-section">How it works</a>
+                {% if is_admin %}
+                    <a href="{{ url_for('main.admin_dashboard') }}">Admin Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('main.admin_login') }}">Admin Login</a>
+                {% endif %}
+            </nav>
+            <div class="sidebar-card">
+                <h3>Quick Notes</h3>
+                <ul>
+                    <li>Enter Year / Section as a single value, e.g. <strong>3-3</strong>.</li>
+                    <li>Submit once and use lookup to check review progress.</li>
+                </ul>
+            </div>
+            <div id="help-section" class="sidebar-card">
+                <h3>How it works</h3>
+                <ol>
+                    <li>Enter your name and year / section.</li>
+                    <li>Upload soft copies of your requirement documents if available.</li>
+                    <li>Click Submit Application to send your record for admin review.</li>
+                    <li>Click Lookup Status to view progress on existing submissions.</li>
+                    <li>If the admin marks a requirement as missing, a maroon alert shows the issue.</li>
+                </ol>
+            </div>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                        </div>
+                        <div>
+                            <p class="brand-caption">Polytechnic University of the Philippines</p>
+                            <h1>Student Submission Portal</h1>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
+                    </div>
+                </div>
+                <p class="site-intro">Submit MOA details, track missing requirements, and view your approval progress.</p>
+            </header>
+
+            <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages">
+                        {% for category, message in messages %}
+                            <div class="message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <section id="submission-section" class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Submit Your MOA</h2>
+                        <p>Provide basic student details and save your submission for admin review.</p>
+                    </div>
+                    <span class="badge">Student View</span>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" class="tracker-form" action="{{ form_action }}">
+                    <div class="form-grid">
+                        <label>
+                            <span>Student Name</span>
+                            <input id="name" name="name" type="text" placeholder="Enter your name" required value="{{ student_filters.name }}" />
+                        </label>
+                        <label>
+                            <span>Year / Section</span>
+                            <input id="year_section" name="year_section" type="text" placeholder="e.g. 3-3" required value="{{ student_filters.year_section }}" />
+                        </label>
+                        <label>
+                            <span>Company Name</span>
+                            <input id="company_name" name="company_name" type="text" placeholder="Enter company name" required />
+                        </label>
+                        <label>
+                            <span>Nature of Business</span>
+                            <input id="business_nature" name="business_nature" type="text" placeholder="e.g. IT, Agriculture" required />
+                        </label>
+                        <label>
+                            <span>MOA Validity</span>
+                            <input id="validity" name="validity" type="text" placeholder="Enter validity e.g. 1 year" required />
+                        </label>
+                        <label>
+                            <span>Date Notarized</span>
+                            <input id="notarized_date" name="notarized_date" type="date" />
+                        </label>
+                        <label>
+                            <span>Upload Requirement Files</span>
+                            <input id="attachments" name="attachments" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
+                        </label>
+                        <label>
+                            <span>Expiration Date</span>
+                            <input id="expiration_date" name="expiration_date" type="date" required />
+                        </label>
+                        {% for field, label in requirement_fields %}
+                            <label class="checkbox-field">
+                                <span>{{ label }}</span>
+                                <input type="checkbox" id="{{ field }}" name="{{ field }}" />
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" name="action" value="submit">Submit Application</button>
+                        <button type="submit" name="action" value="lookup">Lookup Status</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="status-section" class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Your Submission Status</h2>
+                        <p>Only matching student records appear below once you submit or look up your progress.</p>
+                    </div>
+                </div>
+
+                {% if student_records %}
+                    {% for record in student_records %}
+                        <div class="student-card">
+                            <div class="student-card-header">
+                                <div>
+                                    <h3>{{ record.name }}</h3>
+                                    <p>{{ record.display_year_section }}</p>
+                                </div>
+                                <span class="badge {{ record.status | lower }}">{{ record.status }}</span>
+                            </div>
+
+                            <div class="student-card-body">
+                                <div class="status-summary {{ 'status-good' if record.is_complete else 'status-warning' }}">
+                                    {% if record.is_complete %}
+                                        <strong>All requirements met.</strong>
+                                    {% else %}
+                                        <strong>Missing requirements or review required.</strong>
+                                    {% endif %}
+                                </div>
+                                <div class="expiration-info">
+                                    {% if record.days_left > 0 %}
+                                        Expires in {{ record.days_left }} day{{ 's' if record.days_left != 1 else '' }}.
+                                    {% elif record.days_left == 0 %}
+                                        Expires today.
+                                    {% else %}
+                                        Expired {{ record.days_left | abs }} day{{ 's' if record.days_left != -1 else '' }} ago.
+                                    {% endif %}
+                                </div>
+
+                                {% if record.attachment_items %}
+                                    <div class="attachment-list">
+                                        <strong>Attachments:</strong>
+                                        <ul>
+                                            {% for file in record.attachment_items %}
+                                                <li><a href="{{ url_for('main.attachment_download', record_id=record.id, filename=file.filename) }}" target="_blank">{{ file.original }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+
+                                {% if record.missing_requirements %}
+                                    <div class="alert maroon">Missing: {{ record.missing_requirements | join(', ') }}</div>
+                                {% endif %}
+
+                                <div class="requirement-tracker">
+                                    <ul>
+                                        {% for field, label in requirement_fields %}
+                                            <li class="{{ 'complete' if getattr(record, field) else 'missing' }}">
+                                                {{ label }}: {{ 'Yes' if getattr(record, field) else 'No' }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">Use the form above to submit or lookup your current MOA status.</p>
+                {% endif %}
+            </section>
+
+        </main>
+        </div>
+    </div>
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('moa-theme');
+        const body = document.body;
+
+        if (currentTheme === 'dark') {
+            body.classList.add('dark-mode');
+            toggle.textContent = 'Light Mode';
+        } else {
+            body.classList.remove('dark-mode');
+            toggle.textContent = 'Dark Mode';
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const enabled = body.classList.toggle('dark-mode');
+                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
+                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+    </script>
+</body>
+</html>
