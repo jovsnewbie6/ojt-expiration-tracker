@@ -93,3 +93,4 @@ def create_app(config_class=Config):
     app.jinja_env.globals["getattr"] = getattr
 
     return app
+# TERMINAL CHANGE
