@@ -4,10 +4,10 @@ import json
 import os
 import uuid
 from datetime import datetime
-from functools import wraps
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
     flash,
     redirect,
@@ -18,11 +18,13 @@ from flask import (
     session,
     url_for,
 )
+from flask_login import current_user, login_required, login_user, logout_user
+from functools import wraps
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from app import db
-from app.models import StudentRecord, User
+from app.models import StudentRecord, User, Student
 
 main_bp = Blueprint("main", __name__)
 
@@ -72,9 +74,8 @@ def save_attachments(record, files):
 def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_logged_in"):
-            flash("Admin login required.", "error")
-            return redirect(url_for("main.admin_login"))
+        if not current_user.is_authenticated or not getattr(current_user, "is_admin", False):
+            abort(403)
         return view(*args, **kwargs)
 
     return wrapped
@@ -103,17 +104,18 @@ def home():
 
 
 @main_bp.route("/student", methods=["GET", "POST"])
+@login_required
 def student_portal():
-    student_records = []
-    student_filters = {
-        "name": "",
-        "year_section": "",
-    }
+    # Prevent admins from accessing student portal
+    if not isinstance(current_user, Student):
+        flash("Admins cannot access the student portal.", "error")
+        return redirect(url_for("main.admin_dashboard"))
+
+    # Fetch only records for the current student
+    student_records = StudentRecord.query.filter_by(student_id=current_user.id).order_by(StudentRecord.expiration_date).all()
 
     if request.method == "POST":
         action = request.form.get("action", "submit")
-        name = request.form.get("name", "").strip()
-        year_section = request.form.get("year_section", "").strip()
         company_name = request.form.get("company_name", "").strip()
         business_nature = request.form.get("business_nature", "").strip()
         validity = request.form.get("validity", "").strip()
@@ -128,17 +130,9 @@ def student_portal():
         has_intent_letter = bool(request.form.get("has_intent_letter"))
         has_endorsement_letter = bool(request.form.get("has_endorsement_letter"))
 
-        student_filters.update({"name": name, "year_section": year_section})
-
-        if action == "lookup":
-            if not name or not year_section:
-                flash("Please provide your name and year/section to see your progress.", "error")
-            else:
-                student_records = _find_student_records(name, year_section).all()
-
         if action == "submit":
-            if not name or not year_section or not company_name or not business_nature or not validity or not expiration_date_text:
-                flash("Please complete the required student submission fields.", "error")
+            if not company_name or not business_nature or not validity or not expiration_date_text:
+                flash("Please complete the required submission fields.", "error")
             else:
                 try:
                     expiration_date = datetime.strptime(expiration_date_text, "%Y-%m-%d").date()
@@ -155,9 +149,10 @@ def student_portal():
                         return redirect(url_for("main.student_portal"))
 
                 record = StudentRecord(
-                    name=name,
+                    student_id=current_user.id,
+                    name=current_user.name,
                     course="",
-                    year_section=year_section,
+                    year_section=current_user.year_section,
                     company_name=company_name,
                     business_nature=business_nature,
                     validity=validity,
@@ -183,21 +178,116 @@ def student_portal():
                         db.session.commit()
 
                 flash("Your submission is now pending review. Admin will update your status.", "success")
-                student_records = _find_student_records(name, year_section).all()
+                student_records = StudentRecord.query.filter_by(student_id=current_user.id).order_by(StudentRecord.expiration_date).all()
 
     return render_template(
         "index.html",
         student_records=student_records,
         requirement_fields=REQUIREMENT_FIELDS,
         form_action=url_for("main.student_portal"),
-        student_filters=student_filters,
-        is_admin=session.get("admin_logged_in", False),
+        student_filters={},
+        is_admin=False,
     )
+
+
+@main_bp.route("/student/register", methods=["GET", "POST"])
+def student_register():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.student_portal"))
+
+    if request.method == "POST":
+        student_number = request.form.get("student_number", "").strip()
+        full_name = request.form.get("full_name", "").strip()
+        year_section = request.form.get("year_section", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if not student_number or not full_name or not year_section or not password:
+            flash("Please complete all registration fields.", "error")
+            return render_template("register.html")
+
+        if Student.query.filter_by(student_number=student_number).first():
+            flash("That student number is already registered.", "error")
+            return render_template("register.html")
+
+        student = Student(
+            student_number=student_number,
+            name=full_name,
+            year_section=year_section,
+            email=None,
+        )
+        student.set_password(password)
+        db.session.add(student)
+        db.session.commit()
+
+        flash("Registration successful. Please log in.", "success")
+        return redirect(url_for("main.student_login"))
+
+    return render_template("register.html")
+
+
+@main_bp.route("/admin/create-staff", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_create_staff():
+    if not current_user.is_admin:
+        abort(403)
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if not username or not password:
+            flash("Please provide both a username and password.", "error")
+            return render_template("add_admin.html")
+
+        if User.query.filter_by(username=username).first():
+            flash("That admin username is already taken.", "error")
+            return render_template("add_admin.html")
+
+        admin = User(username=username, role="admin")
+        admin.set_password(password)
+        db.session.add(admin)
+        db.session.commit()
+
+        flash("New admin user created successfully.", "success")
+        return redirect(url_for("main.admin_dashboard"))
+
+    return render_template("add_admin.html")
+
+
+@main_bp.route("/student/login", methods=["GET", "POST"])
+def student_login():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.student_portal"))
+
+    if request.method == "POST":
+        student_number = request.form.get("student_number", "").strip()
+        password = request.form.get("password", "").strip()
+        student = Student.query.filter_by(student_number=student_number).first()
+
+        if student and student.check_password(password):
+            login_user(student)
+            flash("Student login successful.", "success")
+            return redirect(url_for("main.student_portal"))
+
+        flash("Invalid student credentials.", "error")
+
+    return render_template("student_login.html")
+
+
+@main_bp.route("/student/logout")
+@login_required
+def student_logout():
+    if isinstance(current_user, Student):
+        logout_user()
+        flash("Student signed out.", "success")
+        return redirect(url_for("main.student_login"))
+    return redirect(url_for("main.admin_dashboard"))
 
 
 @main_bp.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    if session.get("admin_logged_in"):
+    if current_user.is_authenticated:
         return redirect(url_for("main.admin_dashboard"))
 
     if request.method == "POST":
@@ -206,8 +296,7 @@ def admin_login():
         admin = User.query.filter_by(username=username, role="admin").first()
 
         if admin and admin.check_password(password):
-            session["admin_logged_in"] = True
-            session["admin_username"] = admin.username
+            login_user(admin)
             flash("Admin signed in successfully.", "success")
             return redirect(url_for("main.admin_dashboard"))
 
@@ -215,19 +304,21 @@ def admin_login():
 
     return render_template(
         "admin_login.html",
-        is_admin=session.get("admin_logged_in", False),
+        is_admin=current_user.is_authenticated,
     )
 
 
 @main_bp.route("/admin/logout")
+@login_required
+@admin_required
 def admin_logout():
-    session.pop("admin_logged_in", None)
-    session.pop("admin_username", None)
+    logout_user()
     flash("Admin signed out.", "success")
     return redirect(url_for("main.admin_login"))
 
 
 @main_bp.route("/admin/dashboard")
+@login_required
 @admin_required
 def admin_dashboard():
     search_term = request.args.get("search", "").strip()
@@ -248,11 +339,12 @@ def admin_dashboard():
         totals=totals,
         requirement_fields=REQUIREMENT_FIELDS,
         search_term=search_term,
-        is_admin=session.get("admin_logged_in", False),
+        is_admin=current_user.is_authenticated,
     )
 
 
 @main_bp.route("/admin/edit/<int:record_id>", methods=["GET", "POST"])
+@login_required
 @admin_required
 def admin_edit(record_id):
     record = StudentRecord.query.get_or_404(record_id)
@@ -298,11 +390,12 @@ def admin_edit(record_id):
         "admin_edit.html",
         record=record,
         requirement_fields=REQUIREMENT_FIELDS,
-        is_admin=session.get("admin_logged_in", False),
+        is_admin=current_user.is_authenticated,
     )
 
 
 @main_bp.route("/admin/delete/<int:record_id>", methods=["POST"])
+@login_required
 @admin_required
 def admin_delete(record_id):
     record = StudentRecord.query.get_or_404(record_id)
@@ -313,6 +406,7 @@ def admin_delete(record_id):
 
 
 @main_bp.route("/admin/download-report")
+@login_required
 @admin_required
 def admin_download_report():
     records = StudentRecord.query.order_by(StudentRecord.expiration_date).all()
@@ -352,6 +446,7 @@ def admin_download_report():
 
 
 @main_bp.route("/admin/export-approved")
+@login_required
 @admin_required
 def export_approved():
     approved_records = StudentRecord.query.filter_by(status="Approved").order_by(StudentRecord.expiration_date).all()

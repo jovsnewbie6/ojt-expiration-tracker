@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from flask import Flask
+from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 
@@ -10,6 +11,7 @@ from config import Config
 basedir = Path(__file__).resolve().parent.parent
 
 db = SQLAlchemy()
+login_manager = LoginManager()
 
 
 def _ensure_sqlite_columns(app):
@@ -66,6 +68,20 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     db.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = "main.admin_login"
+    login_manager.login_message = "Please log in to access admin features."
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User, Student
+        # Try to fetch from Admin (User) table first
+        admin = User.query.get(int(user_id))
+        if admin:
+            return admin
+        # If not found, fetch from Student table
+        student = Student.query.get(int(user_id))
+        return student
 
     with app.app_context():
         from app import models
