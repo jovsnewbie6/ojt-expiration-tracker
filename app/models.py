@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
@@ -10,6 +11,7 @@ class StudentRecord(db.Model):
     __tablename__ = "student_records"
 
     id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=True)
     name = db.Column(db.String(140), nullable=False)
     course = db.Column(db.String(80), nullable=False)
     year_section = db.Column(db.String(60), nullable=False, default="")
@@ -78,13 +80,39 @@ class StudentRecord(db.Model):
         return fallback or "N/A"
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="admin")
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+class Student(UserMixin, db.Model):
+    __tablename__ = "students"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    student_number = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(140), nullable=False)
+    year_section = db.Column(db.String(60), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_admin(self):
+        return False
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Admin | PUP MOA Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>Manage Staff</h2>
+                    <p>Create new admin accounts for the MOA review team.</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('main.admin_logout') }}">Logout</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Protected Area</h3>
+                <p>Only authenticated admins can add new staff accounts.</p>
+            </div>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                        </div>
+                        <div>
+                            <p class="brand-caption">PUP MOA Tracker</p>
+                            <h1>Create Admin User</h1>
+                        </div>
+                    </div>
+                </div>
+                <p class="site-intro">Add a new admin account to manage student submissions and approvals.</p>
+            </header>
+
+            <main class="main-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="messages">
+                            {% for category, message in messages %}
+                                <div class="message {{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Add Admin Staff</h2>
+                        <p>Enter a username and password for the new admin user.</p>
+                    </div>
+                    <form method="post" class="tracker-form">
+                        <div class="form-grid">
+                            <label>
+                                <span>Username</span>
+                                <input type="text" name="username" placeholder="New admin username" required />
+                            </label>
+                            <label>
+                                <span>Password</span>
+                                <input type="password" name="password" placeholder="Create a password" required />
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit">Create Admin</button>
+                            <a class="secondary-button" href="{{ url_for('main.admin_dashboard') }}">Back to Dashboard</a>
+                        </div>
+                    </form>
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
