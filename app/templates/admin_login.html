@@ -19,12 +19,8 @@
                 </div>
             </div>
             <nav class="vertical-nav">
-                <a href="{{ url_for('main.student_portal') }}">Student Portal</a>
-                {% if is_admin %}
-                    <a href="{{ url_for('main.admin_dashboard') }}">Admin Dashboard</a>
-                {% else %}
-                    <a href="{{ url_for('main.admin_login') }}">Admin Login</a>
-                {% endif %}
+                <a href="{{ url_for('main.login_choice') }}">Back to Login</a>
+                <a href="{{ url_for('main.student_login') }}">Student Login</a>
             </nav>
             <div class="sidebar-card">
                 <h3>Pro Tip</h3>

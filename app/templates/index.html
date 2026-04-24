@@ -22,12 +22,8 @@
                 <a href="#submission-section">Submit MOA</a>
                 <a href="#status-section">View Status</a>
                 <a href="#help-section">How it works</a>
-                <a href="{{ url_for('main.student_register') }}">Register</a>
-                {% if is_admin %}
-                    <a href="{{ url_for('main.admin_dashboard') }}">Admin Dashboard</a>
-                {% else %}
-                    <a href="{{ url_for('main.admin_login') }}">Admin Login</a>
-                {% endif %}
+                <a href="{{ url_for('main.student_change_password') }}">Change Password</a>
+                <a href="{{ url_for('main.student_logout') }}">Logout</a>
             </nav>
             <div class="sidebar-card">
                 <h3>Quick Notes</h3>
@@ -114,8 +110,9 @@
                             <input id="notarized_date" name="notarized_date" type="date" />
                         </label>
                         <label>
-                            <span>Upload Requirement Files</span>
-                            <input id="attachments" name="attachments" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
+                            <span>Upload MOA Document (PDF Only)</span>
+                            <input id="attachments" name="attachments" type="file" multiple accept=".pdf" />
+                            <small style="color: #666; margin-top: 0.25rem; display: block;">Only PDF files are accepted. Please ensure file size is reasonable.</small>
                         </label>
                         <label>
                             <span>Expiration Date</span>
@@ -155,6 +152,19 @@
                             </div>
 
                             <div class="student-card-body">
+                                <!-- Progress Bar -->
+                                <div class="progress-section">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                        <span><strong>Review Progress</strong></span>
+                                        <span>{{ record.progress }}%</span>
+                                    </div>
+                                    <div style="background-color: #e9ecef; border-radius: 4px; overflow: hidden; height: 24px;">
+                                        <div style="background-color: #28a745; height: 100%; width: {{ record.progress }}%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">
+                                            {% if record.progress > 10 %}{{ record.progress }}%{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="status-summary {{ 'status-good' if record.is_complete else 'status-warning' }}">
                                     {% if record.is_complete %}
                                         <strong>All requirements met.</strong>
@@ -162,6 +172,13 @@
                                         <strong>Missing requirements or review required.</strong>
                                     {% endif %}
                                 </div>
+
+                                {% if record.comments %}
+                                <div class="admin-comments" style="margin: 1rem 0; padding: 1rem; background-color: #f8f9fa; border-left: 4px solid #0066cc; border-radius: 4px;">
+                                    <strong>Admin Comments:</strong>
+                                    <p style="margin: 0.5rem 0 0 0; white-space: pre-wrap;">{{ record.comments }}</p>
+                                </div>
+                                {% endif %}
                                 <div class="expiration-info">
                                     {% if record.days_left > 0 %}
                                         Expires in {{ record.days_left }} day{{ 's' if record.days_left != 1 else '' }}.

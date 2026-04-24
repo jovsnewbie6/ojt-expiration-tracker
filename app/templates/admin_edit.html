@@ -93,8 +93,8 @@
                             <input id="notarized_date" name="notarized_date" type="date" value="{{ record.notarized_date.strftime('%Y-%m-%d') if record.notarized_date else '' }}" />
                         </label>
                         <label>
-                            <span>Upload Additional Attachments</span>
-                            <input id="attachments" name="attachments" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
+                            <span>Upload Additional Attachments (PDF Only)</span>
+                            <input id="attachments" name="attachments" type="file" multiple accept=".pdf" />
                         </label>
                         <label>
                             <span>Expiration Date</span>
@@ -105,7 +105,10 @@
                                 <strong>Existing Attachments</strong>
                                 <ul>
                                     {% for file in record.attachment_items %}
-                                        <li><a href="{{ url_for('main.attachment_download', record_id=record.id, filename=file.filename) }}" target="_blank">{{ file.original }}</a></li>
+                                        <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <span>{{ file.original }}</span>
+                                            <a href="{{ url_for('main.attachment_download', record_id=record.id, filename=file.filename) }}" target="_blank" style="background-color: #007bff; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; text-decoration: none; font-size: 0.875rem;">View PDF</a>
+                                        </li>
                                     {% endfor %}
                                 </ul>
                             </div>
@@ -146,7 +149,25 @@
                             <span>Endorsement Letter</span>
                             <input type="checkbox" id="has_endorsement_letter" name="has_endorsement_letter" {% if record.has_endorsement_letter %}checked{% endif %} />
                         </label>
+                        <label style="grid-column: 1 / -1;">
+                            <span>Admin Comments</span>
+                            <textarea id="comments" name="comments" placeholder="Enter feedback or comments for the student (optional)" style="min-height: 100px; font-family: inherit; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">{{ record.comments }}</textarea>
+                        </label>
                     </div>
+                    
+                    <!-- Progress Bar Display -->
+                    <div style="margin: 1.5rem 0; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span><strong>Review Progress</strong></span>
+                            <span>{{ record.progress }}%</span>
+                        </div>
+                        <div style="background-color: #e9ecef; border-radius: 4px; overflow: hidden; height: 28px;">
+                            <div style="background-color: #28a745; height: 100%; width: {{ record.progress }}%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: bold;">
+                                {% if record.progress > 10 %}{{ record.progress }}%{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-actions">
                         <button type="submit">Save Changes</button>
                     </div>

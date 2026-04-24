@@ -15,7 +15,17 @@ if DOTENV_PATH.exists():
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'moa.db'}")
+    
+    # Database URL configuration with Postgres support for Render
+    # Falls back to SQLite for local development
+    _database_url = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'moa.db'}")
+    
+    # Replace postgres:// with postgresql:// for SQLAlchemy 1.4+ compatibility
+    # This is required for Render and other modern deployments
+    if _database_url.startswith("postgres://"):
+        _database_url = _database_url.replace("postgres://", "postgresql://", 1)
+    
+    SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "uploads"))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024

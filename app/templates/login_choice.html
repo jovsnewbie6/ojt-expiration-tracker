@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | PUP MOA Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>Welcome to PUP MOA Tracker</h2>
+                    <p>Manage your Memorandum of Agreement submissions with ease.</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="{{ url_for('main.student_register') }}">New Student?</a>
+                <a href="{{ url_for('main.student_forgot_password') }}">Forgot Password?</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>About</h3>
+                <p>This system helps students and administrators manage MOA requirements and track their expiration dates.</p>
+            </div>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                        </div>
+                        <div>
+                            <p class="brand-caption">PUP MOA Tracker</p>
+                            <h1>Choose Your Login Type</h1>
+                        </div>
+                    </div>
+                </div>
+                <p class="site-intro">Select whether you are a student or an administrator to proceed.</p>
+            </header>
+
+            <main class="main-content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 900px;">
+                    <!-- Student Login Card -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>🎓 Student Login</h2>
+                            <p>Submit and track your MOA records</p>
+                        </div>
+                        <div class="panel-body">
+                            <p>Access your student portal to:</p>
+                            <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                                <li>Submit MOA documents</li>
+                                <li>Track expiration dates</li>
+                                <li>View approval status</li>
+                                <li>Upload requirements</li>
+                            </ul>
+                        </div>
+                        <div class="form-actions">
+                            <a class="primary-button" href="{{ url_for('main.student_login') }}" style="display: block; text-align: center;">Student Login</a>
+                        </div>
+                    </section>
+
+                    <!-- Admin Login Card -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>👨‍💼 Admin Login</h2>
+                            <p>Manage student submissions</p>
+                        </div>
+                        <div class="panel-body">
+                            <p>Access the admin dashboard to:</p>
+                            <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                                <li>Review submissions</li>
+                                <li>Manage records</li>
+                                <li>Export reports</li>
+                                <li>Track deadlines</li>
+                            </ul>
+                        </div>
+                        <div class="form-actions">
+                            <a class="primary-button" href="{{ url_for('main.admin_login') }}" style="display: block; text-align: center;">Admin Login</a>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

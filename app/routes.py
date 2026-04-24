@@ -49,7 +49,8 @@ def parse_integer(value, default=0):
 def allowed_file(filename):
     if not filename:
         return False
-    allowed_extensions = {"pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx", "txt"}
+    # Restrict to PDF only for storage efficiency
+    allowed_extensions = {"pdf"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extensions
 
 
@@ -79,6 +80,16 @@ def admin_required(view):
         return view(*args, **kwargs)
 
     return wrapped
+
+
+@main_bp.route("/login")
+def login_choice():
+    if current_user.is_authenticated:
+        if isinstance(current_user, Student):
+            return redirect(url_for("main.student_portal"))
+        elif current_user.is_admin:
+            return redirect(url_for("main.admin_dashboard"))
+    return render_template("login_choice.html")
 
 
 def _find_student_records(name, year_section):
@@ -167,15 +178,20 @@ def student_portal():
                     has_intent_letter=has_intent_letter,
                     has_endorsement_letter=has_endorsement_letter,
                     is_complete=(has_resume and has_med_cert and has_consent_form and has_moa and has_insurance and has_intent_letter and has_endorsement_letter),
+                    comments="",
                 )
                 db.session.add(record)
                 db.session.commit()
 
+                # Calculate initial progress
+                record.progress = record.calculate_progress()
+                
                 if attachments:
                     saved = save_attachments(record, attachments)
                     if saved:
                         record.attachments = json.dumps(saved)
-                        db.session.commit()
+                
+                db.session.commit()
 
                 flash("Your submission is now pending review. Admin will update your status.", "success")
                 student_records = StudentRecord.query.filter_by(student_id=current_user.id).order_by(StudentRecord.expiration_date).all()
@@ -285,6 +301,79 @@ def student_logout():
     return redirect(url_for("main.admin_dashboard"))
 
 
+@main_bp.route("/student/change-password", methods=["GET", "POST"])
+@login_required
+def student_change_password():
+    if not isinstance(current_user, Student):
+        flash("Only students can change their password from this page.", "error")
+        return redirect(url_for("main.student_portal"))
+
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        if not current_password or not new_password or not confirm_password:
+            flash("Please complete all password fields.", "error")
+            return render_template("student_change_password.html")
+
+        if not current_user.check_password(current_password):
+            flash("Your current password is incorrect.", "error")
+            return render_template("student_change_password.html")
+
+        if new_password != confirm_password:
+            flash("New passwords do not match.", "error")
+            return render_template("student_change_password.html")
+
+        if len(new_password) < 6:
+            flash("New password must be at least 6 characters long.", "error")
+            return render_template("student_change_password.html")
+
+        current_user.set_password(new_password)
+        db.session.commit()
+
+        flash("Your password has been changed successfully.", "success")
+        return redirect(url_for("main.student_portal"))
+
+    return render_template("student_change_password.html")
+
+
+@main_bp.route("/student/forgot-password", methods=["GET", "POST"])
+def student_forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.student_portal"))
+
+    if request.method == "POST":
+        student_number = request.form.get("student_number", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        if not student_number or not new_password or not confirm_password:
+            flash("Please complete all fields.", "error")
+            return render_template("student_forgot_password.html")
+
+        student = Student.query.filter_by(student_number=student_number).first()
+        if not student:
+            flash("Student number not found.", "error")
+            return render_template("student_forgot_password.html")
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("student_forgot_password.html")
+
+        if len(new_password) < 6:
+            flash("Password must be at least 6 characters long.", "error")
+            return render_template("student_forgot_password.html")
+
+        student.set_password(new_password)
+        db.session.commit()
+
+        flash("Your password has been reset successfully. Please log in.", "success")
+        return redirect(url_for("main.student_login"))
+
+    return render_template("student_forgot_password.html")
+
+
 @main_bp.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if current_user.is_authenticated:
@@ -356,6 +445,8 @@ def admin_edit(record_id):
         record.business_nature = request.form.get("business_nature", record.business_nature).strip()
         record.validity = request.form.get("validity", record.validity).strip()
         record.status = request.form.get("status", record.status)
+        record.comments = request.form.get("comments", "").strip()
+        
         record.has_resume = bool(request.form.get("has_resume"))
         record.has_med_cert = bool(request.form.get("has_med_cert"))
         record.has_consent_form = bool(request.form.get("has_consent_form"))
@@ -363,6 +454,9 @@ def admin_edit(record_id):
         record.has_insurance = bool(request.form.get("has_insurance"))
         record.has_intent_letter = bool(request.form.get("has_intent_letter"))
         record.has_endorsement_letter = bool(request.form.get("has_endorsement_letter"))
+
+        # Calculate progress based on completed requirements
+        record.progress = record.calculate_progress()
 
         attachments = request.files.getlist("attachments")
         if attachments:

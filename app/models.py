@@ -33,6 +33,8 @@ class StudentRecord(db.Model):
     has_endorsement_letter = db.Column(db.Boolean, nullable=False, default=False)
     is_complete = db.Column(db.Boolean, nullable=False, default=False)
     expiration_date = db.Column(db.Date, nullable=False)
+    comments = db.Column(db.Text, nullable=True, default="")
+    progress = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     REQUIREMENT_FIELDS = [
@@ -79,6 +81,12 @@ class StudentRecord(db.Model):
         fallback = " ".join(filter(None, [self.college_year, self.section])).strip()
         return fallback or "N/A"
 
+    def calculate_progress(self):
+        """Calculate progress percentage based on completed requirements (0-100)"""
+        total_requirements = len(self.REQUIREMENT_FIELDS)
+        completed = sum(1 for field, _ in self.REQUIREMENT_FIELDS if getattr(self, field))
+        return int((completed / total_requirements) * 100) if total_requirements > 0 else 0
+
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
@@ -91,6 +99,9 @@ class User(UserMixin, db.Model):
     @property
     def is_admin(self):
         return self.role == "admin"
+
+    def get_id(self):
+        return f"admin_{self.id}"
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -113,6 +124,9 @@ class Student(UserMixin, db.Model):
     @property
     def is_admin(self):
         return False
+
+    def get_id(self):
+        return f"student_{self.id}"
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

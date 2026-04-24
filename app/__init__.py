@@ -10,6 +10,8 @@ from config import Config
 
 basedir = Path(__file__).resolve().parent.parent
 
+# SQLAlchemy setup - supports both SQLite (development) and Postgres (production)
+# Database URL is configured in config.py with automatic postgres:// → postgresql:// conversion
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -69,27 +71,40 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = "main.admin_login"
-    login_manager.login_message = "Please log in to access admin features."
+    login_manager.login_view = "main.login_choice"
+    login_manager.login_message = "Please log in to continue."
 
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User, Student
-        # Try to fetch from Admin (User) table first
+        
+        # Parse the user type from the ID (format: "admin_1" or "student_1")
+        if user_id.startswith("admin_"):
+            user_id_num = int(user_id.split("_")[1])
+            return User.query.get(user_id_num)
+        elif user_id.startswith("student_"):
+            user_id_num = int(user_id.split("_")[1])
+            return Student.query.get(user_id_num)
+        
+        # Fallback for old-style IDs (for backward compatibility)
         admin = User.query.get(int(user_id))
         if admin:
             return admin
-        # If not found, fetch from Student table
         student = Student.query.get(int(user_id))
         return student
 
     with app.app_context():
         from app import models
 
+        # Create all database tables (works with both SQLite and Postgres)
         db.create_all()
+        
+        # SQLite-specific column migration (only runs for sqlite:// databases)
         _ensure_sqlite_columns(app)
+        
         from app.models import StudentRecord
 
+        # Migrate unfilled year_section fields
         unfilled_year_sections = StudentRecord.query.filter(
             (StudentRecord.year_section == "") | (StudentRecord.year_section.is_(None))
         ).all()
@@ -101,6 +116,7 @@ def create_app(config_class=Config):
         if unfilled_year_sections:
             db.session.commit()
 
+        # Create default admin user if it doesn't exist
         _create_default_admin_user(app)
 
     from app.routes import main_bp
