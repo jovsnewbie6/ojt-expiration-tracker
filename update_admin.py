@@ -8,7 +8,7 @@ app = create_app()
 with app.app_context():
     try:
         # Find the default admin
-        user = Admin.query.filter_by(username='admin').first()
+        user = User.query.filter_by(username='admin').first()
         
         if user:
             # UPDATE THESE TWO LINES
