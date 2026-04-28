@@ -3,9 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env
+.env.*
+!.env.example  # Include template for others
 venv/
 ENV/
-.env.*
+.venv/
+.venv-1/
 
 # SQLite
 moa.db

@@ -1,53 +1,267 @@
-# OJT Expiration Tracker
+# PUP MOA Tracking System
 
-This project is a simple system designed to track OJT (On-the-Job Training) MOA (Memorandum of Agreement) expiration dates for students. It allows users to select a course and the college year of the students, and manage expiration dates effectively.
+A professional system for tracking OJT (On-the-Job Training) MOA (Memorandum of Agreement) expiration dates, student records, and admin management. Built with Flask and PostgreSQL for Poly University of the Philippines (PUP).
 
-## Features
+## 🎯 Features
 
-- Course selection dropdown
-- College year selection dropdown
-- List management for OJT MOA expiration dates
-- Simple and user-friendly interface
+### Student Portal
+- Student registration and authentication
+- MOA record submission with expiration dates
+- Document attachment management (PDFs)
+- Real-time progress tracking on requirements
+- Password change and account management
+- Status notifications (Pending, Incomplete, Approved)
 
-## Project Structure
+### Admin Dashboard
+- Review and manage all student submissions
+- Update MOA status and expiration information
+- Track document completeness (Resume, Medical Certificate, MOA, Insurance, etc.)
+- Export approved records to Excel
+- Search and filter submissions
+- Download CSV reports
 
-```
-ojt-expiration-tracker
-├── src
-│   ├── app.ts                # Entry point of the application
-│   ├── components
-│   │   ├── courseSelector.ts  # Component for selecting courses
-│   │   ├── yearSelector.ts    # Component for selecting college years
-│   │   └── expirationList.ts   # Component for managing expiration dates
-│   ├── models
-│   │   └── student.ts         # Model for student data
-│   └── types
-│       └── index.ts           # Type definitions
-├── package.json               # NPM configuration file
-├── tsconfig.json              # TypeScript configuration file
-└── README.md                  # Project documentation
-```
+### Account Management
+- **Soft Delete (Deactivation)**: Deactivate user accounts without deleting data
+- **Admin Staff Management**: Create and manage admin accounts
+- **Student Account Management**: View all students and toggle account status
+- **Security**: Prevents self-deactivation, audit trail preservation
 
-## Installation
+### Database
+- SQLite for local development
+- PostgreSQL (Neon.tech) for production on Render
+- Automatic schema creation on first startup
+- Soft delete support for compliance and audit trails
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/ojt-expiration-tracker.git
-   ```
-2. Navigate to the project directory:
-   ```
+## 🚀 Quick Start
+
+### Local Development
+
+1. **Clone and Setup**
+   ```bash
+   git clone https://github.com/jovsnewbie6/ojt-expiration-tracker.git
    cd ojt-expiration-tracker
-   ```
-3. Install the dependencies:
-   ```
-   npm install
+   python -m venv .venv
+   .venv\Scripts\activate  # Windows
+   # or
+   source .venv/bin/activate  # Linux/Mac
    ```
 
-## Usage
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### TypeScript version
+3. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env for local development (defaults to SQLite)
+   ```
 
-1. Start the application:
+4. **Initialize Database**
+   ```bash
+   python create_director.py  # Creates Director admin account
+   ```
+
+5. **Run Application**
+   ```bash
+   python run.py
+   # App runs at http://localhost:5000
+   ```
+
+### Default Credentials (Local Development)
+
+- **Director Admin**
+  - Username: `director`
+  - Password: `ChangeMe@2024`
+
+- **Regular Admin** (optional)
+  - Username: `admin`
+  - Password: `admin123`
+
+## 📦 Project Structure
+
+```
+ojt-expiration-tracker/
+├── app/
+│   ├── __init__.py           # Flask app factory
+│   ├── models.py             # Database models (User, Student, StudentRecord)
+│   ├── routes.py             # Application routes
+│   ├── templates/            # HTML templates
+│   │   ├── login_choice.html
+│   │   ├── admin_login.html
+│   │   ├── admin_dashboard.html
+│   │   ├── admin_edit.html
+│   │   ├── manage_students.html  # NEW: Student account management
+│   │   ├── add_admin.html        # UPDATED: Admin staff management
+│   │   └── ...
+│   └── static/
+│       └── style.css         # Styling with dark mode support
+├── config.py                 # Configuration (PostgreSQL support)
+├── create_director.py        # Initialize Director account
+├── DEPLOYMENT.md             # Production deployment guide
+├── render.yaml               # Render.com configuration
+├── requirements.txt          # Python dependencies
+└── .env.example              # Environment variables template
+```
+
+## 🔐 Database Models
+
+### User (Admin)
+- `id` (Primary Key)
+- `username` (Unique)
+- `password_hash`
+- `role` (admin/staff)
+- `is_active` (Soft delete support)
+
+### Student
+- `id` (Primary Key)
+- `email` (Unique)
+- `student_number` (Unique)
+- `name`
+- `year_section`
+- `password_hash`
+- `is_active` (Soft delete support)
+- `created_at`
+
+### StudentRecord
+- `id` (Primary Key)
+- `student_id` (Foreign Key)
+- `name`, `course`, `year_section`
+- `company_name`, `business_nature`
+- `validity`, `notarized_date`
+- Document tracking (resume, medical cert, MOA, insurance, etc.)
+- `status` (Pending/Incomplete/Approved)
+- `expiration_date`, `progress`
+- `attachments` (JSON array of uploaded PDFs)
+
+## 🌐 Deployment to Render + Neon PostgreSQL
+
+### Prerequisites
+1. GitHub repository connected to Render.com
+2. Neon.tech PostgreSQL database
+
+### Setup Steps
+
+1. **Create Neon PostgreSQL Database**
+   - Go to neon.tech, create account
+   - Create a new database
+   - Copy the connection string
+
+2. **Configure Render.com**
+   - Connect GitHub repository
+   - Use `whigan` branch for testing or `main` for production
+   - Set environment variables:
+     ```
+     DATABASE_URL=postgresql://user:pass@ep-xxxxx.neon.tech/dbname?sslmode=require
+     SECRET_KEY=your-secure-random-key
+     DIRECTOR_USERNAME=director
+     DIRECTOR_PASSWORD=your-secure-password
+     ```
+
+3. **Deploy**
+   - Push to `whigan` or `main` branch
+   - Render automatically builds and deploys
+   - Check logs in Render dashboard
+
+4. **Post-Deployment**
+   ```bash
+   # SSH into Render
+   python create_director.py  # Initialize Director account
+   ```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production setup.
+
+## 🔄 Account Deactivation (Soft Delete)
+
+Instead of permanently deleting users, accounts can be deactivated:
+
+- **Prevents Login**: Deactivated users cannot log in
+- **Preserves Data**: All records and submissions remain in database
+- **Audit Trail**: Maintains compliance and historical records
+- **Reactivation**: Can be reactivated at any time
+
+### Admin Actions
+1. Go to "Manage Staff" to deactivate/reactivate admins
+2. Go to "Manage Students" to deactivate/reactivate students
+3. Deactivated accounts appear greyed out with status badge
+
+## 📝 API Routes
+
+### Authentication
+- `GET /login` - Login choice page (student vs admin)
+- `POST /student/login` - Student login
+- `POST /admin/login` - Admin login
+- `GET /student/logout` - Student logout
+- `GET /admin/logout` - Admin logout
+
+### Student Portal
+- `GET /student/portal` - Student dashboard
+- `POST /student/register` - Register new student
+- `GET /student/change-password` - Change password
+- `POST /student/forgot-password` - Password reset
+
+### Admin Dashboard
+- `GET /admin/dashboard` - Admin main dashboard
+- `GET /admin/edit/<record_id>` - Edit student submission
+- `POST /admin/edit/<record_id>` - Update submission
+- `POST /admin/delete/<record_id>` - Delete submission
+- `GET /admin/create-staff` - Manage admin staff
+- `GET /admin/manage-students` - Manage student accounts
+- `POST /admin/toggle-user/<type>/<id>` - Deactivate/reactivate user
+
+### Exports
+- `GET /admin/download-report` - Download CSV report
+- `GET /admin/export-approved` - Export approved records as Excel
+
+## 🛠️ Technologies
+
+- **Backend**: Python Flask
+- **Database**: SQLite (dev), PostgreSQL/Neon (production)
+- **ORM**: SQLAlchemy
+- **Auth**: Flask-Login, Werkzeug
+- **Server**: Gunicorn (production)
+- **Frontend**: HTML5, CSS3 (with dark mode)
+- **Deployment**: Render.com
+
+## 📋 Requirements
+
+See [requirements.txt](requirements.txt) for complete list:
+- Flask 3.1.3
+- Flask-Login 0.6.3
+- Flask-SQLAlchemy 3.1.1
+- SQLAlchemy 2.0.49
+- psycopg2-binary 2.9.12 (PostgreSQL driver)
+- Gunicorn 25.3.0
+- python-dotenv 1.2.2
+
+## 🔧 Development
+
+### Run Tests
+```bash
+python -c "from app import create_app; app = create_app(); print('✓ App initialized')"
+```
+
+### Database Migrations
+For schema changes, modify `app/models.py` and the database updates automatically on next startup via `db.create_all()`.
+
+### Environment Variables
+Copy `.env.example` to `.env` and customize:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+## 📄 License
+
+This project is proprietary and confidential for Poly University of the Philippines (PUP) Internal Audit Office.
+
+## 👥 Contributors
+
+- Development Team - PUP Information Technology Services
+
+## 📞 Support
+
+For issues or questions, contact the PUP Internal Audit Office or IT Services.
    ```
    npm start
    ```
