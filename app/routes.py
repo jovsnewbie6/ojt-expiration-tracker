@@ -254,21 +254,22 @@ def admin_create_staff():
 
         if not username or not password:
             flash("Please provide both a username and password.", "error")
-            return render_template("add_admin.html")
+            return render_template("add_admin.html", admins=User.query.filter_by(role="admin").all())
 
         if User.query.filter_by(username=username).first():
             flash("That admin username is already taken.", "error")
-            return render_template("add_admin.html")
+            return render_template("add_admin.html", admins=User.query.filter_by(role="admin").all())
 
-        admin = User(username=username, role="admin")
+        admin = User(username=username, role="admin", is_active=True)
         admin.set_password(password)
         db.session.add(admin)
         db.session.commit()
 
         flash("New admin user created successfully.", "success")
-        return redirect(url_for("main.admin_dashboard"))
+        return redirect(url_for("main.admin_create_staff"))
 
-    return render_template("add_admin.html")
+    admins = User.query.filter_by(role="admin").all()
+    return render_template("add_admin.html", admins=admins)
 
 
 @main_bp.route("/student/login", methods=["GET", "POST"])
@@ -282,6 +283,11 @@ def student_login():
         student = Student.query.filter_by(student_number=student_number).first()
 
         if student and student.check_password(password):
+            # Check if account is active
+            if not student.is_active:
+                flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+                return render_template("student_login.html")
+            
             login_user(student)
             flash("Student login successful.", "success")
             return redirect(url_for("main.student_portal"))
@@ -385,6 +391,11 @@ def admin_login():
         admin = User.query.filter_by(username=username, role="admin").first()
 
         if admin and admin.check_password(password):
+            # Check if account is active
+            if not admin.is_active:
+                flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+                return render_template("admin_login.html", is_admin=current_user.is_authenticated)
+            
             login_user(admin)
             flash("Admin signed in successfully.", "success")
             return redirect(url_for("main.admin_dashboard"))
@@ -499,6 +510,44 @@ def admin_delete(record_id):
     return redirect(url_for("main.admin_dashboard"))
 
 
+@main_bp.route("/admin/toggle-user/<string:user_type>/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def toggle_user_status(user_type, user_id):
+    """Toggle user active status (soft delete). Only admins can deactivate users."""
+    
+    # Prevent director from deactivating their own account
+    if user_type == "admin" and current_user.id == user_id:
+        flash("You cannot deactivate your own account.", "error")
+        return redirect(request.referrer or url_for("main.admin_dashboard"))
+    
+    if user_type == "admin":
+        user = User.query.get_or_404(user_id)
+        user.is_active = not user.is_active
+        action = "deactivated" if not user.is_active else "reactivated"
+        flash(f"Admin account '{user.username}' has been {action}.", "success")
+    elif user_type == "student":
+        student = Student.query.get_or_404(user_id)
+        student.is_active = not student.is_active
+        action = "deactivated" if not student.is_active else "reactivated"
+        flash(f"Student account '{student.name}' ({student.student_number}) has been {action}.", "success")
+    else:
+        flash("Invalid user type.", "error")
+        return redirect(request.referrer or url_for("main.admin_dashboard"))
+    
+    db.session.commit()
+    return redirect(request.referrer or url_for("main.admin_dashboard"))
+
+
+@main_bp.route("/admin/manage-students")
+@login_required
+@admin_required
+def admin_manage_students():
+    """Display and manage student account status."""
+    students = Student.query.order_by(Student.created_at.desc()).all()
+    return render_template("manage_students.html", students=students)
+
+
 @main_bp.route("/admin/download-report")
 @login_required
 @admin_required
@@ -581,3 +630,65 @@ def export_approved():
         download_name="approved_submissions.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+@main_bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        # 1. Validation
+        if not check_password_hash(current_user.password_hash, old_password):
+            flash('Current password is incorrect.', 'error')
+            return redirect(url_for('main.change_password'))
+
+        if new_password != confirm_password:
+            flash('New passwords do not match.', 'error')
+            return redirect(url_for('main.change_password'))
+
+        # 2. Update the password (Works for both Admin and Student automatically)
+        current_user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+
+        flash('Your password has been updated!', 'success')
+        
+        # Redirect based on who they are
+        if hasattr(current_user, 'student_number'):
+            return redirect(url_for('main.student_portal'))
+        return redirect(url_for('main.admin_dashboard'))
+
+    return render_template('change_password.html')
+
+@main_bp.route('/delete-student/<int:id>', methods=['POST'])
+@login_required
+def delete_student(id):
+    # Security: Ensure only admins can delete
+    if not current_user.is_admin: # Assuming you have an is_admin flag
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('main.index'))
+    
+    student = Student.query.get_or_404(id)
+    db.session.delete(student)
+    db.session.commit()
+    flash(f'Account for {student.student_number} has been removed.', 'success')
+    return redirect(url_for('main.admin_dashboard'))
+
+@main_bp.route('/delete-admin/<int:id>', methods=['POST'])
+@login_required
+def delete_admin(id):
+    if not current_user.is_admin:
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('main.index'))
+    
+    # Prevent the Director from deleting themselves!
+    if current_user.id == id:
+        flash('You cannot delete your own account.', 'error')
+        return redirect(url_for('main.admin_dashboard'))
+
+    admin = Admin.query.get_or_404(id)
+    db.session.delete(admin)
+    db.session.commit()
+    flash('Admin account removed.', 'success')
+    return redirect(url_for('main.admin_dashboard'))

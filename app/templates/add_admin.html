@@ -11,7 +11,7 @@
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="brand-logo">
-                    <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                    <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
                 </div>
                 <div>
                     <h2>Manage Staff</h2>
@@ -33,7 +33,7 @@
                 <div class="header-top">
                     <div class="brand">
                         <div class="brand-logo">
-                            <img src="https://www.pup.edu.ph/resources/images/logo.png" alt="PUP Logo" />
+                            <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
                         </div>
                         <div>
                             <p class="brand-caption">PUP MOA Tracker</p>
@@ -76,6 +76,60 @@
                             <a class="secondary-button" href="{{ url_for('main.admin_dashboard') }}">Back to Dashboard</a>
                         </div>
                     </form>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Existing Admin Accounts</h2>
+                        <p>Manage existing admin staff and account status.</p>
+                    </div>
+                    {% if admins %}
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for admin in admins %}
+                                        <tr class="{% if not admin.is_active %}deactivated-row{% endif %}">
+                                            <td>
+                                                {{ admin.username }}
+                                                {% if admin.id == current_user.id %}
+                                                    <span class="badge" style="margin-left: 8px; background-color: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">You</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if admin.is_active %}
+                                                    <span style="color: #4CAF50; font-weight: bold;">✓ Active</span>
+                                                {% else %}
+                                                    <span style="color: #f44336; font-weight: bold;">✗ Deactivated</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="row-actions">
+                                                {% if admin.id != current_user.id %}
+                                                    <form method="post" action="{{ url_for('main.toggle_user_status', user_type='admin', user_id=admin.id) }}" style="display: inline;">
+                                                        {% if admin.is_active %}
+                                                            <button class="delete-button" type="submit" onclick="return confirm('Deactivate this admin account?');">Deactivate</button>
+                                                        {% else %}
+                                                            <button class="edit-link" type="submit" onclick="return confirm('Reactivate this admin account?');">Reactivate</button>
+                                                        {% endif %}
+                                                    </form>
+                                                {% else %}
+                                                    <span style="color: #999;">Cannot manage own account</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p style="color: #999;">No admin accounts found.</p>
+                    {% endif %}
                 </section>
             </main>
         </div>

@@ -95,6 +95,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="admin")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     @property
     def is_admin(self):
@@ -119,6 +120,7 @@ class Student(UserMixin, db.Model):
     name = db.Column(db.String(140), nullable=False)
     year_section = db.Column(db.String(60), nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property

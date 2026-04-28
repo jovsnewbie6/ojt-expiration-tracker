@@ -96,28 +96,14 @@ def create_app(config_class=Config):
     with app.app_context():
         from app import models
 
-        # Create all database tables (works with both SQLite and Postgres)
-        db.create_all()
-        
-        # SQLite-specific column migration (only runs for sqlite:// databases)
-        _ensure_sqlite_columns(app)
-        
-        from app.models import StudentRecord
-
-        # Migrate unfilled year_section fields
-        unfilled_year_sections = StudentRecord.query.filter(
-            (StudentRecord.year_section == "") | (StudentRecord.year_section.is_(None))
-        ).all()
-        for record in unfilled_year_sections:
-            record.year_section = " ".join(
-                filter(None, [record.college_year, record.section])
-            ).strip()
-            record.is_complete = record.has_all_requirements
-        if unfilled_year_sections:
-            db.session.commit()
-
-        # Create default admin user if it doesn't exist
-        _create_default_admin_user(app)
+        try:
+            # Create all database tables (works with both SQLite and Postgres)
+            db.create_all()
+            # Ensure SQLite schema compatibility on development
+            _ensure_sqlite_columns(app)
+        except Exception as e:
+            app.logger.error(f"Database initialization error: {e}")
+            raise
 
     from app.routes import main_bp
 
@@ -125,4 +111,3 @@ def create_app(config_class=Config):
     app.jinja_env.globals["getattr"] = getattr
 
     return app
-# TERMINAL CHANGE

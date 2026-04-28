@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Students | PUP MOA Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>Account Management</h2>
+                    <p>Control student account access and status.</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('main.admin_create_staff') }}">Manage Staff</a>
+                <a href="{{ url_for('main.admin_manage_students') }}">Manage Students</a>
+                <a href="{{ url_for('main.admin_logout') }}">Logout</a>
+            </nav>
+            <div class="sidebar-card">
+                <h3>Account Status</h3>
+                <p>Use this page to deactivate or reactivate student accounts. Deactivated accounts maintain audit trails.</p>
+            </div>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
+                        </div>
+                        <div>
+                            <p class="brand-caption">Admin Dashboard</p>
+                            <h1>Manage Student Accounts</h1>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
+                    </div>
+                </div>
+                <p class="site-intro">Manage student account status. Deactivating a student prevents them from logging in while preserving their records.</p>
+            </header>
+
+            <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages">
+                        {% for category, message in messages %}
+                            <div class="message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Student Accounts</h2>
+                            <p>View and manage all student account statuses.</p>
+                        </div>
+                    </div>
+
+                    {% if students %}
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th>Student Number</th>
+                                        <th>Year / Section</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in students %}
+                                        <tr class="{% if not student.is_active %}deactivated-row{% endif %}">
+                                            <td>{{ student.name }}</td>
+                                            <td>{{ student.student_number }}</td>
+                                            <td>{{ student.year_section }}</td>
+                                            <td>{{ student.email or 'N/A' }}</td>
+                                            <td>
+                                                {% if student.is_active %}
+                                                    <span style="color: #4CAF50; font-weight: bold;">✓ Active</span>
+                                                {% else %}
+                                                    <span style="color: #f44336; font-weight: bold;">✗ Deactivated</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ student.created_at.strftime('%b %d, %Y') if student.created_at else 'N/A' }}</td>
+                                            <td class="row-actions">
+                                                <form method="post" action="{{ url_for('main.toggle_user_status', user_type='student', user_id=student.id) }}" style="display: inline;">
+                                                    {% if student.is_active %}
+                                                        <button class="delete-button" type="submit" onclick="return confirm('Deactivate this student account? They will not be able to log in.');">Deactivate</button>
+                                                    {% else %}
+                                                        <button class="edit-link" type="submit" onclick="return confirm('Reactivate this student account?');">Reactivate</button>
+                                                    {% endif %}
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div style="padding: 20px; text-align: center; color: #999;">
+                            <p>No student accounts found.</p>
+                        </div>
+                    {% endif %}
+                </section>
+
+                <section class="panel help-panel">
+                    <h2>Account Deactivation Policy</h2>
+                    <ul>
+                        <li><strong>Soft Delete:</strong> Deactivating accounts removes access without deleting data—perfect for compliance and audit trails.</li>
+                        <li><strong>Prevents Login:</strong> Deactivated students will see an error message when attempting to log in.</li>
+                        <li><strong>Records Preserved:</strong> All submissions and documents remain in the system for historical records.</li>
+                        <li><strong>Reactivation:</strong> You can reactivate accounts at any time to restore access.</li>
+                    </ul>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('moa-theme');
+        const body = document.body;
+
+        if (currentTheme === 'dark') {
+            body.classList.add('dark-mode');
+            toggle.textContent = 'Light Mode';
+        } else {
+            body.classList.remove('dark-mode');
+            toggle.textContent = 'Dark Mode';
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const enabled = body.classList.toggle('dark-mode');
+                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
+                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+    </script>
+</body>
+</html>
