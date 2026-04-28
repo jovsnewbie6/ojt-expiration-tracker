@@ -8,14 +8,14 @@ app = create_app()
 with app.app_context():
     try:
         # Find the default admin
-        user = User.query.filter_by(username='admin').first()
+        user = User.query.filter_by(username='YourNewUsername').first()
         
         if user:
             # UPDATE THESE TWO LINES
-            user.username = 'YourNewUsername' 
+            user.username = 'admin' 
             
             # Make sure 'password_hash' matches the column name in your models.py
-            user.password_hash = generate_password_hash('YourNewStrongPassword')
+            user.password_hash = generate_password_hash('admin123')
             
             db.session.commit()
             print("[+] Admin credentials updated successfully!")
