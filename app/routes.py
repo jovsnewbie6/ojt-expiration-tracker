@@ -3,6 +3,7 @@ import io
 import json
 import os
 import uuid
+import logging
 from datetime import datetime
 
 from flask import (
@@ -25,6 +26,9 @@ from werkzeug.utils import secure_filename
 
 from app import db
 from app.models import StudentRecord, User, Student
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 main_bp = Blueprint("main", __name__)
 
@@ -212,31 +216,37 @@ def student_register():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
-        student_number = request.form.get("student_number", "").strip()
-        full_name = request.form.get("full_name", "").strip()
-        year_section = request.form.get("year_section", "").strip()
-        password = request.form.get("password", "").strip()
+        try:
+            student_number = request.form.get("student_number", "").strip()
+            full_name = request.form.get("full_name", "").strip()
+            year_section = request.form.get("year_section", "").strip()
+            password = request.form.get("password", "").strip()
 
-        if not student_number or not full_name or not year_section or not password:
-            flash("Please complete all registration fields.", "error")
+            if not student_number or not full_name or not year_section or not password:
+                flash("Please complete all registration fields.", "error")
+                return render_template("register.html")
+
+            if Student.query.filter_by(student_number=student_number).first():
+                flash("That student number is already registered.", "error")
+                return render_template("register.html")
+
+            student = Student(
+                student_number=student_number,
+                name=full_name,
+                year_section=year_section,
+                email=None,
+            )
+            student.set_password(password)
+            db.session.add(student)
+            db.session.commit()
+
+            flash("Registration successful. Please log in.", "success")
+            return redirect(url_for("main.student_login"))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Student registration error: {str(e)}")
+            flash("An error occurred during registration. Please try again.", "error")
             return render_template("register.html")
-
-        if Student.query.filter_by(student_number=student_number).first():
-            flash("That student number is already registered.", "error")
-            return render_template("register.html")
-
-        student = Student(
-            student_number=student_number,
-            name=full_name,
-            year_section=year_section,
-            email=None,
-        )
-        student.set_password(password)
-        db.session.add(student)
-        db.session.commit()
-
-        flash("Registration successful. Please log in.", "success")
-        return redirect(url_for("main.student_login"))
 
     return render_template("register.html")
 
@@ -249,24 +259,30 @@ def admin_create_staff():
         abort(403)
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
+        try:
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "").strip()
 
-        if not username or not password:
-            flash("Please provide both a username and password.", "error")
+            if not username or not password:
+                flash("Please provide both a username and password.", "error")
+                return render_template("add_admin.html", admins=User.query.filter_by(role="admin").all())
+
+            if User.query.filter_by(username=username).first():
+                flash("That admin username is already taken.", "error")
+                return render_template("add_admin.html", admins=User.query.filter_by(role="admin").all())
+
+            admin = User(username=username, role="admin", is_active=True)
+            admin.set_password(password)
+            db.session.add(admin)
+            db.session.commit()
+
+            flash("New admin user created successfully.", "success")
+            return redirect(url_for("main.admin_create_staff"))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating admin user: {str(e)}")
+            flash("An error occurred while creating the admin user. Please try again.", "error")
             return render_template("add_admin.html", admins=User.query.filter_by(role="admin").all())
-
-        if User.query.filter_by(username=username).first():
-            flash("That admin username is already taken.", "error")
-            return render_template("add_admin.html", admins=User.query.filter_by(role="admin").all())
-
-        admin = User(username=username, role="admin", is_active=True)
-        admin.set_password(password)
-        db.session.add(admin)
-        db.session.commit()
-
-        flash("New admin user created successfully.", "success")
-        return redirect(url_for("main.admin_create_staff"))
 
     admins = User.query.filter_by(role="admin").all()
     return render_template("add_admin.html", admins=admins)
@@ -278,21 +294,31 @@ def student_login():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
-        student_number = request.form.get("student_number", "").strip()
-        password = request.form.get("password", "").strip()
-        student = Student.query.filter_by(student_number=student_number).first()
-
-        if student and student.check_password(password):
-            # Check if account is active
-            if not student.is_active:
-                flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+        try:
+            student_number = request.form.get("student_number", "").strip()
+            password = request.form.get("password", "").strip()
+            
+            if not student_number or not password:
+                flash("Please provide both student number and password.", "error")
                 return render_template("student_login.html")
             
-            login_user(student)
-            flash("Student login successful.", "success")
-            return redirect(url_for("main.student_portal"))
+            student = Student.query.filter_by(student_number=student_number).first()
 
-        flash("Invalid student credentials.", "error")
+            if student and student.check_password(password):
+                # Check if account is active
+                if not student.is_active:
+                    flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+                    return render_template("student_login.html")
+                
+                login_user(student)
+                flash("Student login successful.", "success")
+                return redirect(url_for("main.student_portal"))
+            else:
+                logger.warning(f"Failed student login attempt for student number: {student_number}")
+                flash("Invalid student credentials.", "error")
+        except Exception as e:
+            logger.error(f"Student login error: {str(e)}")
+            flash("An error occurred during login. Please try again.", "error")
 
     return render_template("student_login.html")
 
@@ -386,21 +412,31 @@ def admin_login():
         return redirect(url_for("main.admin_dashboard"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-        admin = User.query.filter_by(username=username, role="admin").first()
-
-        if admin and admin.check_password(password):
-            # Check if account is active
-            if not admin.is_active:
-                flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+        try:
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "").strip()
+            
+            if not username or not password:
+                flash("Please provide both username and password.", "error")
                 return render_template("admin_login.html", is_admin=current_user.is_authenticated)
             
-            login_user(admin)
-            flash("Admin signed in successfully.", "success")
-            return redirect(url_for("main.admin_dashboard"))
+            admin = User.query.filter_by(username=username, role="admin").first()
 
-        flash("Invalid admin credentials.", "error")
+            if admin and admin.check_password(password):
+                # Check if account is active
+                if not admin.is_active:
+                    flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+                    return render_template("admin_login.html", is_admin=current_user.is_authenticated)
+                
+                login_user(admin)
+                flash("Admin signed in successfully.", "success")
+                return redirect(url_for("main.admin_dashboard"))
+            else:
+                logger.warning(f"Failed admin login attempt for username: {username}")
+                flash("Invalid admin credentials.", "error")
+        except Exception as e:
+            logger.error(f"Admin login error: {str(e)}")
+            flash("An error occurred during login. Please try again.", "error")
 
     return render_template(
         "admin_login.html",

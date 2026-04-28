@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 
 from flask import Flask
@@ -68,6 +69,16 @@ def create_app(config_class=Config):
         static_folder=os.path.join(Path(__file__).resolve().parent, "static"),
     )
     app.config.from_object(config_class)
+    
+    # Configure logging
+    if not app.debug:
+        if not app.logger.hasHandlers():
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            app.logger.addHandler(handler)
+            app.logger.setLevel(logging.INFO)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -78,20 +89,29 @@ def create_app(config_class=Config):
     def load_user(user_id):
         from app.models import User, Student
         
-        # Parse the user type from the ID (format: "admin_1" or "student_1")
-        if user_id.startswith("admin_"):
-            user_id_num = int(user_id.split("_")[1])
-            return User.query.get(user_id_num)
-        elif user_id.startswith("student_"):
-            user_id_num = int(user_id.split("_")[1])
-            return Student.query.get(user_id_num)
-        
-        # Fallback for old-style IDs (for backward compatibility)
-        admin = User.query.get(int(user_id))
-        if admin:
-            return admin
-        student = Student.query.get(int(user_id))
-        return student
+        try:
+            # Parse the user type from the ID (format: "admin_1" or "student_1")
+            if user_id and isinstance(user_id, str):
+                if user_id.startswith("admin_"):
+                    user_id_num = int(user_id.split("_")[1])
+                    return User.query.get(user_id_num)
+                elif user_id.startswith("student_"):
+                    user_id_num = int(user_id.split("_")[1])
+                    return Student.query.get(user_id_num)
+            
+            # Fallback for old-style IDs (for backward compatibility)
+            try:
+                user_id_num = int(user_id) if isinstance(user_id, str) else user_id
+                admin = User.query.get(user_id_num)
+                if admin:
+                    return admin
+                student = Student.query.get(user_id_num)
+                return student
+            except (ValueError, TypeError):
+                return None
+        except Exception as e:
+            app.logger.error(f"Error loading user {user_id}: {str(e)}")
+            return None
 
     with app.app_context():
         from app import models
@@ -101,6 +121,7 @@ def create_app(config_class=Config):
             db.create_all()
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
+            app.logger.info("Database initialized successfully")
         except Exception as e:
             app.logger.error(f"Database initialization error: {e}")
             raise
