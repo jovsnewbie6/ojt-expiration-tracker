@@ -122,6 +122,24 @@ def create_app(config_class=Config):
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
             app.logger.info("Database initialized successfully")
+            
+            # Initialize default admin user for Render deployment
+            try:
+                from app.models import User
+                
+                admin_user = User.query.filter_by(username='admin').first()
+                if not admin_user:
+                    new_admin = User(username='admin', role='admin', is_active=True)
+                    new_admin.set_password('admin123')
+                    db.session.add(new_admin)
+                    db.session.commit()
+                    app.logger.info("Default admin user created successfully")
+                else:
+                    app.logger.info("Admin user already exists")
+            except Exception as e:
+                app.logger.error(f"Admin user initialization error: {e}")
+                # Don't raise - allow app to continue if admin user initialization fails
+                
         except Exception as e:
             app.logger.error(f"Database initialization error: {e}")
             raise
