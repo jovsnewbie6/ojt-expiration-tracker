@@ -93,7 +93,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="admin")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
@@ -119,7 +119,7 @@ class Student(UserMixin, db.Model):
     student_number = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(140), nullable=False)
     year_section = db.Column(db.String(60), nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

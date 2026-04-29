@@ -119,6 +119,16 @@ def create_app(config_class=Config):
         try:
             # Create all database tables (works with both SQLite and Postgres)
             db.create_all()
+            
+            # Expand password_hash column for Neon PostgreSQL (prevent StringDataRightTruncation error)
+            try:
+                db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256)"))
+                db.session.commit()
+                app.logger.info("Password hash column expanded to VARCHAR(256)")
+            except Exception as e:
+                app.logger.warning(f"Could not expand password_hash column: {e}")
+                # This might fail if column is already 256 or table doesn't exist yet, which is fine
+            
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
             app.logger.info("Database initialized successfully")
