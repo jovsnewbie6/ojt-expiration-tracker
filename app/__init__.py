@@ -129,6 +129,15 @@ def create_app(config_class=Config):
                 app.logger.warning(f"Could not expand password_hash column: {e}")
                 # This might fail if column is already 256 or table doesn't exist yet, which is fine
             
+            # Expand password_hash column in students table as well
+            try:
+                db.session.execute(text("ALTER TABLE students ALTER COLUMN password_hash TYPE VARCHAR(256)"))
+                db.session.commit()
+                app.logger.info("Students password_hash column expanded to VARCHAR(256)")
+            except Exception as e:
+                app.logger.warning(f"Could not expand students password_hash column: {e}")
+                # This might fail if column is already 256 or table doesn't exist yet, which is fine
+            
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
             app.logger.info("Database initialized successfully")
