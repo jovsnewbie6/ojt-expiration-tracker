@@ -1,49 +1,31 @@
-"""
-Database initialization script for Neon PostgreSQL.
-Creates all tables and seeds a default admin user.
-"""
-
+import os
 from app import db, create_app
 from app.models import User
 
-
-def init_database():
-    """Initialize the database with tables and default admin user."""
-    print("Starting database initialization...")
-    
-    # Create Flask app instance
+def setup_admin():
+    # Force the app to use the Render/Neon DATABASE_URL
     app = create_app()
-    print("✓ Flask app created")
     
-    # Create all tables within app context
     with app.app_context():
-        print("Creating database tables...")
-        db.create_all()
-        print("✓ Database tables created")
-        
-        # Check if admin user already exists
-        print("Checking for existing admin user...")
-        admin_user = User.query.filter_by(username='admin').first()
-        
-        if admin_user:
-            print("✓ Admin user already exists")
-        else:
-            print("Creating new admin user...")
-            admin = User(
-                username='admin',
-                role='admin',
-                is_active=True
-            )
-            admin.set_password('admin123')
-            print("✓ Admin user object created with password hash")
+        try:
+            print("Connecting to Neon...")
+            db.create_all()
             
-            # Add and commit to database
-            db.session.add(admin)
-            db.session.commit()
-            print("✓ Admin user committed to database")
-    
-    print("\n✓ Database initialization completed successfully!")
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                print("Creating admin...")
+                new_admin = User(username='admin', role='admin', is_active=True)
+                new_admin.set_password('admin123')
+                db.session.add(new_admin)
+                db.session.commit()
+                print("Admin created successfully!")
+            else:
+                print("Admin already exists.")
+        except Exception as e:
+            print(f"DATABASE ERROR: {e}")
+            # This ensures the build doesn't just hang
+            import sys
+            sys.exit(1)
 
-
-if __name__ == '__main__':
-    init_database()
+if __name__ == "__main__":
+    setup_admin()
