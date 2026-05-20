@@ -25,7 +25,7 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from app import db
-from app.models import StudentRecord, User, Student
+from app.models import StudentRecord, User, Student, Permission
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -262,6 +262,7 @@ def admin_create_staff():
         try:
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "").strip()
+            selected_permissions = request.form.getlist("permissions")
 
             if not username or not password:
                 flash("Please provide both a username and password.", "error")
@@ -273,6 +274,14 @@ def admin_create_staff():
 
             admin = User(username=username, role="admin", is_active=True)
             admin.set_password(password)
+            
+            # Append selected permissions to the new staff member
+            if selected_permissions:
+                for perm_name in selected_permissions:
+                    perm_object = Permission.query.filter_by(name=perm_name).first()
+                    if perm_object:
+                        admin.permissions.append(perm_object)
+            
             db.session.add(admin)
             db.session.commit()
 
@@ -582,6 +591,94 @@ def admin_manage_students():
     """Display and manage student account status."""
     students = Student.query.order_by(Student.created_at.desc()).all()
     return render_template("manage_students.html", students=students)
+
+
+@main_bp.route("/admin/manage-staff")
+@login_required
+@admin_required
+def admin_manage_staff():
+    """Display and manage staff (admin/faculty/coordinator) account roles and permissions."""
+    users = User.query.order_by(User.id.desc()).all()
+    return render_template("manage_staff.html", users=users)
+
+
+@main_bp.route("/admin/edit-user-access/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def edit_user_access(user_id):
+    """Update a user's role and permissions."""
+    user = User.query.get_or_404(user_id)
+    
+    try:
+        # Prevent editing own account
+        if current_user.id == user_id:
+            flash("You cannot modify your own account access.", "error")
+            return redirect(url_for("main.admin_manage_staff"))
+        
+        # Update role
+        new_role = request.form.get("role", "").strip()
+        if new_role not in ["student", "faculty", "coordinator", "admin"]:
+            flash("Invalid role selected.", "error")
+            return redirect(url_for("main.admin_manage_staff"))
+        
+        user.role = new_role
+        
+        # Clear existing permissions and add new ones
+        selected_permissions = request.form.getlist("permissions")
+        user.permissions.clear()
+        
+        if selected_permissions:
+            for perm_name in selected_permissions:
+                perm_object = Permission.query.filter_by(name=perm_name).first()
+                if perm_object:
+                    user.permissions.append(perm_object)
+        
+        db.session.commit()
+        flash(f"User '{user.username}' access updated successfully.", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating user access: {str(e)}")
+        flash("An error occurred while updating user access. Please try again.", "error")
+    
+    return redirect(url_for("main.admin_manage_staff"))
+
+
+@main_bp.route("/admin/modify-student-access/<int:student_id>", methods=["POST"])
+@login_required
+@admin_required
+def modify_student_access(student_id):
+    """Update a student's role and permissions (promotion to faculty/coordinator)."""
+    student = Student.query.get_or_404(student_id)
+    
+    try:
+        # Update role
+        new_role = request.form.get("role", "").strip()
+        if new_role not in ["student", "faculty", "coordinator"]:
+            flash("Invalid role selected.", "error")
+            return redirect(url_for("main.admin_manage_students"))
+        
+        student.role = new_role
+        
+        # Clear existing permissions and add new ones
+        selected_permissions = request.form.getlist("permissions")
+        student.permissions.clear()
+        
+        if selected_permissions:
+            for perm_name in selected_permissions:
+                perm_object = Permission.query.filter_by(name=perm_name).first()
+                if perm_object:
+                    student.permissions.append(perm_object)
+        
+        db.session.commit()
+        flash(f"Student '{student.name}' access updated successfully.", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating student access: {str(e)}")
+        flash("An error occurred while updating student access. Please try again.", "error")
+    
+    return redirect(url_for("main.admin_manage_students"))
 
 
 @main_bp.route("/admin/download-report")

@@ -7,6 +7,21 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import db
 
 
+# Association table for many-to-many relationship between User and Permission
+user_permissions = db.Table(
+    "user_permissions",
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),
+    db.Column("permission_id", db.Integer, db.ForeignKey("permissions.id"), primary_key=True),
+)
+
+# Association table for many-to-many relationship between Student and Permission
+student_permissions = db.Table(
+    "student_permissions",
+    db.Column("student_id", db.Integer, db.ForeignKey("students.id"), primary_key=True),
+    db.Column("permission_id", db.Integer, db.ForeignKey("permissions.id"), primary_key=True),
+)
+
+
 class StudentRecord(db.Model):
     __tablename__ = "student_records"
 
@@ -96,6 +111,12 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="admin")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    permissions = db.relationship(
+        "Permission",
+        secondary=user_permissions,
+        backref=db.backref("users", lazy="dynamic"),
+        lazy="select",
+    )
 
     @property
     def is_admin(self):
@@ -121,7 +142,14 @@ class Student(UserMixin, db.Model):
     year_section = db.Column(db.String(60), nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    role = db.Column(db.String(30), nullable=False, default="student")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    permissions = db.relationship(
+        "Permission",
+        secondary=student_permissions,
+        backref=db.backref("students", lazy="dynamic"),
+        lazy="select",
+    )
 
     @property
     def is_admin(self):
@@ -135,3 +163,15 @@ class Student(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+
+class Permission(db.Model):
+    __tablename__ = "permissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+
+    def __repr__(self):
+        return f"<Permission {self.name}>"
+
