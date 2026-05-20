@@ -61,6 +61,26 @@ def _create_default_admin_user(app):
         db.session.commit()
 
 
+def _seed_core_permissions():
+    from app.models import Permission
+
+    core_permissions = [
+        ("can_deactivate_users", "Deactivate or reactivate internal user accounts."),
+        ("can_approve_accounts", "Approve or reject new account requests."),
+        ("can_assign_roles", "Assign roles or manage RBAC permissions for staff."),
+        ("can_edit_records", "Edit student records and submission details."),
+        ("can_delete_records", "Delete student records from the system."),
+        ("can_manage_exports", "Export and manage data reports."),
+        ("can_view_logs", "View audit logs and activity reports."),
+        ("can_bypass_deadlines", "Bypass expiration deadlines for special cases."),
+    ]
+
+    for name, description in core_permissions:
+        if not Permission.query.filter_by(name=name).first():
+            db.session.add(Permission(name=name, description=description))
+    db.session.commit()
+
+
 def create_app(config_class=Config):
     app = Flask(
         __name__,
@@ -101,6 +121,8 @@ def create_app(config_class=Config):
             db.create_all()
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
+            # Seed core RBAC permissions automatically
+            _seed_core_permissions()
         except Exception as e:
             app.logger.error(f"Database initialization error: {e}")
             raise

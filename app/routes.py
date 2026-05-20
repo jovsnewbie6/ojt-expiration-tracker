@@ -24,7 +24,8 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from app import db
-from app.models import StudentRecord, User, Student
+from app.decorators import permission_required
+from app.models import Permission, StudentRecord, User, Student
 
 main_bp = Blueprint("main", __name__)
 
@@ -441,6 +442,40 @@ def admin_dashboard():
         search_term=search_term,
         is_admin=current_user.is_authenticated,
     )
+
+
+@main_bp.route("/admin/permissions")
+@login_required
+@admin_required
+def admin_permissions():
+    users = User.query.order_by(User.username).all()
+    permissions = Permission.query.order_by(Permission.name).all()
+    return render_template(
+        "admin_permissions.html",
+        users=users,
+        permissions=permissions,
+        is_admin=current_user.is_authenticated,
+    )
+
+
+@main_bp.route("/admin/update-permissions", methods=["POST"])
+@login_required
+@admin_required
+def admin_update_permissions():
+    users = User.query.order_by(User.username).all()
+    permissions = Permission.query.order_by(Permission.id).all()
+
+    for user in users:
+        # Reset this user's permissions, then apply selections from the submitted grid.
+        user.permissions = []
+        for permission in permissions:
+            checkbox_name = f"permission_{user.id}_{permission.id}"
+            if request.form.get(checkbox_name):
+                user.permissions.append(permission)
+
+    db.session.commit()
+    flash("Permissions have been updated successfully.", "success")
+    return redirect(url_for("main.admin_permissions"))
 
 
 @main_bp.route("/admin/edit/<int:record_id>", methods=["GET", "POST"])

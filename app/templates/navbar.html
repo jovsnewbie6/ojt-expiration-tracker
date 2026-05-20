@@ -1,0 +1,32 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('main.admin_dashboard') }}">MOA Tracker</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                    </li>
+                    {% if current_user.has_permission('can_deactivate_users') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.admin_permissions') }}">System Settings & Permissions</a>
+                        </li>
+                    {% endif %}
+                    {% if current_user.has_permission('can_approve_accounts') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.admin_manage_students') }}">Manage Accounts</a>
+                        </li>
+                    {% endif %}
+                    {% if current_user.has_permission('can_edit_records') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">OJT Data & Records</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

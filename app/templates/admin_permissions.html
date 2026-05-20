@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Permission Management | PUP MOA Tracker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3">Permissions Dashboard</h1>
+                <p class="text-muted mb-0">Assign and update user permissions across the system.</p>
+            </div>
+            <div>
+                <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <form method="post" action="{{ url_for('main.admin_update_permissions') }}">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">User</th>
+                                    <th scope="col">Role</th>
+                                    <th scope="col">Status</th>
+                                    {% for permission in permissions %}
+                                        <th scope="col" class="text-nowrap">{{ permission.name.replace('_', ' ') | title }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.username }}</td>
+                                        <td>{{ user.role | capitalize }}</td>
+                                        <td>{{ 'Active' if user.is_active else 'Inactive' }}</td>
+                                        {% for permission in permissions %}
+                                            <td class="text-center">
+                                                <div class="form-check">
+                                                    <input
+                                                        class="form-check-input"
+                                                        type="checkbox"
+                                                        id="permission_{{ user.id }}_{{ permission.id }}"
+                                                        name="permission_{{ user.id }}_{{ permission.id }}"
+                                                        value="1"
+                                                        {% if user.has_permission(permission.name) %}checked{% endif %}
+                                                    />
+                                                </div>
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-white border-top py-3 text-end">
+                        <button type="submit" class="btn btn-primary">Save Permissions</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

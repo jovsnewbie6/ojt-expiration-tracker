@@ -7,6 +7,24 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import db
 
 
+user_permissions = db.Table(
+    "user_permissions",
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),
+    db.Column("permission_id", db.Integer, db.ForeignKey("permissions.id"), primary_key=True),
+)
+
+
+class Permission(db.Model):
+    __tablename__ = "permissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(60), unique=True, nullable=False)
+    description = db.Column(db.String(200), nullable=True)
+
+    def __repr__(self):
+        return f"<Permission {self.name}>"
+
+
 class StudentRecord(db.Model):
     __tablename__ = "student_records"
 
@@ -110,6 +128,18 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    permissions = db.relationship(
+        "Permission",
+        secondary=user_permissions,
+        backref=db.backref("users", lazy="dynamic"),
+        lazy="subquery",
+    )
+
+    def has_permission(self, permission_name):
+        if not permission_name:
+            return False
+        return any(permission.name == permission_name for permission in self.permissions)
+
 
 class Student(UserMixin, db.Model):
     __tablename__ = "students"
@@ -135,3 +165,6 @@ class Student(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def has_permission(self, permission_name):
+        return False
