@@ -111,9 +111,15 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="admin")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    permissions = db.relationship(
+        "Permission",
+        secondary=user_permissions,
+        backref=db.backref("users", lazy="dynamic"),
+        lazy="select",
+    )
 
     @property
     def is_admin(self):
@@ -127,13 +133,6 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-    permissions = db.relationship(
-        "Permission",
-        secondary=user_permissions,
-        backref=db.backref("users", lazy="dynamic"),
-        lazy="subquery",
-    )
 
     def has_permission(self, permission_name):
         if not permission_name:
@@ -149,8 +148,9 @@ class Student(UserMixin, db.Model):
     student_number = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(140), nullable=False)
     year_section = db.Column(db.String(60), nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    role = db.Column(db.String(30), nullable=False, default="student")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property

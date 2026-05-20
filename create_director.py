@@ -49,7 +49,8 @@ def create_director_account():
             # Create new Director account
             director = User(
                 username=director_username,
-                role="admin"  # "admin" role grants full access
+                role="admin",  # "admin" role grants full access
+                is_active=True
             )
             director.set_password(director_password)
             

@@ -4,20 +4,41 @@ on:
   push:
     branches:
       - main
+      - whigan  # Testing branch for Render deployment
 
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Run syntax check
-        run: python -m py_compile app.py app/__init__.py app/routes.py app/models.py
+      
+      - name: Run syntax checks
+        run: |
+          python -m py_compile app.py
+          python -m py_compile app/__init__.py
+          python -m py_compile app/routes.py
+          python -m py_compile app/models.py
+          python -m py_compile config.py
+          python -m py_compile create_director.py
+      
+      - name: Test app initialization
+        run: python -c "from app import create_app; app = create_app(); print('✓ App initialized successfully')"
 
   deploy:
     needs: ci
@@ -25,7 +46,27 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Render
+      
+      - name: Deploy to Render (Main Branch)
         run: |
-          echo "Render deployment is configured via render.yaml."
-          echo "Connect your GitHub repo to Render and use this file for automated deployment."
+          echo "✓ CI passed - Ready for production deployment"
+          echo "GitHub repo is connected to Render with render.yaml"
+          echo "Deployment will trigger automatically on Render"
+          echo ""
+          echo "Post-deployment checklist:"
+          echo "1. Set DATABASE_URL env var in Render (from Neon.tech)"
+          echo "2. Set SECRET_KEY to a secure random value"
+          echo "3. Run: python create_director.py to initialize Director account"
+          echo "4. Verify app at https://your-render-app.onrender.com"
+
+  test-whigan:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/whigan'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Testing Branch - whigan
+        run: |
+          echo "✓ Testing branch (whigan) - CI passed"
+          echo "This branch is for staging/testing before production merge to main"
+

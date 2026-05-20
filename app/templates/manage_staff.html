@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Manage Students | PUP MOA Tracker</title>
+    <title>Manage Staff | PUP MOA Tracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
@@ -15,19 +15,19 @@
                     <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
                 </div>
                 <div>
-                    <h2>Account Management</h2>
-                    <p>Control student account access and status.</p>
+                    <h2>Manage Staff</h2>
+                    <p>Control user roles and permissions.</p>
                 </div>
             </div>
             <nav class="vertical-nav">
                 <a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('main.admin_create_staff') }}">Manage Staff</a>
+                <a href="{{ url_for('main.admin_create_staff') }}">Create Staff</a>
                 <a href="{{ url_for('main.admin_manage_students') }}">Manage Students</a>
                 <a href="{{ url_for('main.admin_logout') }}">Logout</a>
             </nav>
             <div class="sidebar-card">
-                <h3>Account Status</h3>
-                <p>Use this page to deactivate or reactivate student accounts. Deactivated accounts maintain audit trails.</p>
+                <h3>Staff Management</h3>
+                <p>Update user roles and assign permissions to Faculty and Coordinators.</p>
             </div>
         </aside>
 
@@ -39,100 +39,89 @@
                             <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
                         </div>
                         <div>
-                            <p class="brand-caption">Admin Dashboard</p>
-                            <h1>Manage Student Accounts</h1>
+                            <p class="brand-caption">PUP MOA Tracker</p>
+                            <h1>Manage Staff Access</h1>
                         </div>
                     </div>
-                    <div class="header-actions">
-                        <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
-                    </div>
                 </div>
-                <p class="site-intro">Manage student account status. Deactivating a student prevents them from logging in while preserving their records.</p>
+                <p class="site-intro">Update roles and permissions for faculty members and coordinators.</p>
             </header>
 
             <main class="main-content">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="messages">
-                        {% for category, message in messages %}
-                            <div class="message {{ category }}">{{ message }}</div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="messages">
+                            {% for category, message in messages %}
+                                <div class="message {{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
 
                 <section class="panel">
                     <div class="panel-header">
-                        <div>
-                            <h2>Student Accounts</h2>
-                            <p>View and manage all student account statuses.</p>
-                        </div>
+                        <h2>Staff Directory</h2>
+                        <p>Click "Edit Access" to modify a user's role and permissions.</p>
                     </div>
-
-                    {% if students %}
+                    {% if users %}
                         <div class="table-wrap">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Student Name</th>
-                                        <th>Student Number</th>
-                                        <th>Year / Section</th>
-                                        <th>Email</th>
-                                        <th>System Role</th>
+                                        <th>Username</th>
+                                        <th>Role</th>
                                         <th>Status</th>
-                                        <th>Registered</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for student in students %}
-                                        <tr class="{% if not student.is_active %}deactivated-row{% endif %}">
-                                            <td>{{ student.name }}</td>
-                                            <td>{{ student.student_number }}</td>
-                                            <td>{{ student.year_section }}</td>
-                                            <td>{{ student.email or 'N/A' }}</td>
+                                    {% for user in users %}
+                                        <tr class="{% if not user.is_active %}deactivated-row{% endif %}">
+                                            <td>{{ user.username }}</td>
                                             <td>
                                                 <span style="
                                                     padding: 4px 8px;
                                                     border-radius: 3px;
                                                     font-size: 12px;
                                                     font-weight: bold;
-                                                    {% if student.role == 'student' %}
+                                                    {% if user.role == 'student' %}
                                                         background-color: #E3F2FD;
                                                         color: #1976D2;
-                                                    {% elif student.role == 'faculty' %}
+                                                    {% elif user.role == 'faculty' %}
                                                         background-color: #F3E5F5;
                                                         color: #7B1FA2;
-                                                    {% elif student.role == 'coordinator' %}
+                                                    {% elif user.role == 'coordinator' %}
                                                         background-color: #FFF3E0;
                                                         color: #E65100;
+                                                    {% else %}
+                                                        background-color: #E8F5E9;
+                                                        color: #388E3C;
                                                     {% endif %}
                                                 ">
-                                                    {{ student.role | title }}
+                                                    {{ user.role | title }}
                                                 </span>
                                             </td>
                                             <td>
-                                                {% if student.is_active %}
+                                                {% if user.is_active %}
                                                     <span style="color: #4CAF50; font-weight: bold;">✓ Active</span>
                                                 {% else %}
                                                     <span style="color: #f44336; font-weight: bold;">✗ Deactivated</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ student.created_at.strftime('%b %d, %Y') if student.created_at else 'N/A' }}</td>
                                             <td class="row-actions">
                                                 <button
                                                     type="button"
                                                     class="edit-link"
                                                     data-bs-toggle="modal"
-                                                    data-bs-target="#modifyAccessModal"
-                                                    onclick="populateStudentModal({{ student.id }}, '{{ student.name }}', '{{ student.role }}', {{ [{'name': p.name} for p in student.permissions] | tojson }})">
+                                                    data-bs-target="#editAccessModal"
+                                                    onclick="populateModal({{ user.id }}, '{{ user.username }}', '{{ user.role }}', {{ [{'name': p.name} for p in user.permissions] | tojson }})">
                                                     Edit Access
                                                 </button>
-                                                <form method="post" action="{{ url_for('main.toggle_user_status', user_type='student', user_id=student.id) }}" style="display: inline;">
-                                                    {% if student.is_active %}
-                                                        <button class="delete-button" type="submit" onclick="return confirm('Deactivate this student account? They will not be able to log in.');">Deactivate</button>
+                                                <form method="post" action="{{ url_for('main.toggle_user_status', user_type='admin', user_id=user.id) }}" style="display: inline;">
+                                                    {% if user.is_active %}
+                                                        <button class="delete-button" type="submit" onclick="return confirm('Deactivate this account?');">Deactivate</button>
                                                     {% else %}
-                                                        <button class="edit-link" type="submit" onclick="return confirm('Reactivate this student account?');">Reactivate</button>
+                                                        <button class="edit-link" type="submit" onclick="return confirm('Reactivate this account?');">Reactivate</button>
                                                     {% endif %}
                                                 </form>
                                             </td>
@@ -142,47 +131,36 @@
                             </table>
                         </div>
                     {% else %}
-                        <div style="padding: 20px; text-align: center; color: #999;">
-                            <p>No student accounts found.</p>
-                        </div>
+                        <p style="color: #999;">No staff accounts found.</p>
                     {% endif %}
-                </section>
-
-                <section class="panel help-panel">
-                    <h2>Account Deactivation Policy</h2>
-                    <ul>
-                        <li><strong>Soft Delete:</strong> Deactivating accounts removes access without deleting data—perfect for compliance and audit trails.</li>
-                        <li><strong>Prevents Login:</strong> Deactivated students will see an error message when attempting to log in.</li>
-                        <li><strong>Records Preserved:</strong> All submissions and documents remain in the system for historical records.</li>
-                        <li><strong>Reactivation:</strong> You can reactivate accounts at any time to restore access.</li>
-                    </ul>
                 </section>
             </main>
         </div>
     </div>
 
-    <!-- Modify Student Access Modal -->
-    <div class="modal fade" id="modifyAccessModal" tabindex="-1" aria-labelledby="modifyAccessLabel" aria-hidden="true">
+    <!-- Edit Access Modal -->
+    <div class="modal fade" id="editAccessModal" tabindex="-1" aria-labelledby="editAccessLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="border-bottom: 2px solid #f0f0f0;">
-                    <h5 class="modal-title" id="modifyAccessLabel">Modify Student System Access</h5>
+                    <h5 class="modal-title" id="editAccessLabel">Edit User Access</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="modifyAccessForm" method="post">
+                <form id="editAccessForm" method="post">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="modalStudentName" class="form-label" style="font-weight: 600;">Student Name</label>
-                            <input type="text" class="form-control" id="modalStudentName" disabled />
+                            <label for="modalUsername" class="form-label" style="font-weight: 600;">Username</label>
+                            <input type="text" class="form-control" id="modalUsername" disabled />
                         </div>
 
                         <div class="mb-3">
-                            <label for="modalStudentRole" class="form-label" style="font-weight: 600;">System Role</label>
-                            <select class="form-select" id="modalStudentRole" name="role" required>
+                            <label for="modalRole" class="form-label" style="font-weight: 600;">Role</label>
+                            <select class="form-select" id="modalRole" name="role" required>
                                 <option value="">Select a role...</option>
                                 <option value="student">Student</option>
                                 <option value="faculty">Faculty</option>
                                 <option value="coordinator">Coordinator</option>
+                                <option value="admin">Admin</option>
                             </select>
                         </div>
 
@@ -236,13 +214,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function populateStudentModal(userId, studentName, role, permissions) {
-            // Set the form action to the correct student edit endpoint
-            document.getElementById('modifyAccessForm').action = `/admin/modify-student-access/${userId}`;
+        function populateModal(userId, username, role, permissions) {
+            // Set the form action to the correct user edit endpoint
+            document.getElementById('editAccessForm').action = `/admin/edit-user-access/${userId}`;
             
             // Populate basic fields
-            document.getElementById('modalStudentName').value = studentName;
-            document.getElementById('modalStudentRole').value = role;
+            document.getElementById('modalUsername').value = username;
+            document.getElementById('modalRole').value = role;
             
             // Clear all checkboxes first
             const checkboxes = document.querySelectorAll('input[name="permissions"]');
@@ -250,7 +228,7 @@
                 checkbox.checked = false;
             });
             
-            // Check the student's current permissions
+            // Check the user's current permissions
             if (Array.isArray(permissions) && permissions.length > 0) {
                 permissions.forEach(perm => {
                     const checkbox = document.querySelector(`input[name="permissions"][value="${perm.name}"]`);
@@ -259,26 +237,6 @@
                     }
                 });
             }
-        }
-
-        const toggle = document.getElementById('theme-toggle');
-        const currentTheme = localStorage.getItem('moa-theme');
-        const body = document.body;
-
-        if (currentTheme === 'dark') {
-            body.classList.add('dark-mode');
-            toggle.textContent = 'Light Mode';
-        } else {
-            body.classList.remove('dark-mode');
-            toggle.textContent = 'Dark Mode';
-        }
-
-        if (toggle) {
-            toggle.addEventListener('click', function () {
-                const enabled = body.classList.toggle('dark-mode');
-                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
-                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
-            });
         }
     </script>
 </body>
