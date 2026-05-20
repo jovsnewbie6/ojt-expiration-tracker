@@ -32,7 +32,8 @@
                 <ul class="dashboard-metrics">
                     <li><strong>{{ totals.pending }}</strong><span>Pending</span></li>
                     <li><strong>{{ totals.incomplete }}</strong><span>Incomplete</span></li>
-                    <li><strong>{{ totals.approved }}</strong><span>Approved</span></li>
+                    <li><strong>{{ totals.approved }}</strong><span>Approved but not Visited</span></li>
+                    <li><strong>{{ totals.practicum_visited }}</strong><span>Approved and Visited</span></li>
                 </ul>
             </div>
         </aside>
@@ -91,7 +92,8 @@
                         <thead>
                             <tr>
                                 <th>Student</th>
-                                <th>Year / Section</th>
+                                <th>Year</th>
+                                <th>Section</th>
                                 <th>Status</th>
                                 <th>Complete</th>
                                 <th>Days Left</th>
@@ -104,8 +106,17 @@
                             {% for record in records %}
                                 <tr class="{% if record.status == 'Incomplete' %}expired{% elif record.status == 'Pending' %}expiring{% endif %}">
                                     <td>{{ record.name }}</td>
-                                    <td>{{ record.display_year_section }}</td>
-                                    <td>{{ record.status }}</td>
+                                    <td>{{ record.year_only }}</td>
+                                    <td>{{ record.section_only or 'N/A' }}</td>
+                                    <td>
+                                        {% if record.status == 'Approved' %}
+                                            Approved but not Visited
+                                        {% elif record.status == 'Practicum Visited' %}
+                                            Approved and Visited
+                                        {% else %}
+                                            {{ record.status }}
+                                        {% endif %}
+                                    </td>
                                     <td>{{ 'Yes' if record.is_complete else 'No' }}</td>
                                     <td>{{ record.days_left }}</td>
                                     <td>{{ record.attachment_items | length }}</td>
@@ -128,7 +139,8 @@
                 <ul>
                     <li>Pending: {{ totals.pending }}</li>
                     <li>Incomplete: {{ totals.incomplete }}</li>
-                    <li>Approved: {{ totals.approved }}</li>
+                    <li>Approved but not Visited: {{ totals.approved }}</li>
+                    <li>Approved and Visited: {{ totals.practicum_visited }}</li>
                 </ul>
             </section>
         </main>

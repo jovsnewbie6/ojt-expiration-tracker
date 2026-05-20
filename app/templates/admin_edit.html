@@ -118,7 +118,8 @@
                             <select id="status" name="status" required>
                                 <option value="Pending" {% if record.status == 'Pending' %}selected{% endif %}>Pending</option>
                                 <option value="Incomplete" {% if record.status == 'Incomplete' %}selected{% endif %}>Incomplete</option>
-                                <option value="Approved" {% if record.status == 'Approved' %}selected{% endif %}>Approved</option>
+                                <option value="Approved" {% if record.status == 'Approved' %}selected{% endif %}>Approved but not Visited</option>
+                                <option value="Practicum Visited" {% if record.status == 'Practicum Visited' %}selected{% endif %}>Approved and Visited</option>
                             </select>
                         </label>
                         <label class="checkbox-field">

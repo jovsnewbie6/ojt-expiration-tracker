@@ -501,6 +501,7 @@ def admin_dashboard():
         "pending": StudentRecord.query.filter_by(status="Pending").count(),
         "incomplete": StudentRecord.query.filter_by(status="Incomplete").count(),
         "approved": StudentRecord.query.filter_by(status="Approved").count(),
+        "practicum_visited": StudentRecord.query.filter_by(status="Practicum Visited").count(),
     }
     return render_template(
         "admin_dashboard.html",
@@ -799,7 +800,8 @@ def admin_download_report():
 @login_required
 @staff_required
 def export_approved():
-    approved_records = StudentRecord.query.filter_by(status="Approved").order_by(StudentRecord.expiration_date).all()
+    approved_records = StudentRecord.query.filter(StudentRecord.status.in_(["Approved", "Practicum Visited"]))
+    approved_records = approved_records.order_by(StudentRecord.expiration_date).all()
 
     if not approved_records:
         flash("There are no approved submissions to export.", "error")

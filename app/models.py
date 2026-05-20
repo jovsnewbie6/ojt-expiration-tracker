@@ -105,6 +105,31 @@ class StudentRecord(db.Model):
         fallback = " ".join(filter(None, [self.college_year, self.section])).strip()
         return fallback or "N/A"
 
+    @property
+    def year_only(self):
+        if self.college_year:
+            return self.college_year
+        if self.year_section:
+            if "/" in self.year_section:
+                return self.year_section.split("/", 1)[0].strip()
+            if "-" in self.year_section:
+                return self.year_section.split("-", 1)[0].strip()
+            return self.year_section.split()[0] if self.year_section.split() else self.year_section
+        return "N/A"
+
+    @property
+    def section_only(self):
+        if self.section:
+            return self.section
+        if self.year_section:
+            if "/" in self.year_section:
+                return self.year_section.split("/", 1)[1].strip()
+            if "-" in self.year_section:
+                return self.year_section.split("-", 1)[1].strip()
+            parts = self.year_section.split()
+            return parts[-1] if len(parts) > 1 else ""
+        return ""
+
     def calculate_progress(self):
         """Calculate progress percentage based on completed requirements (0-100)"""
         total_requirements = len(self.REQUIREMENT_FIELDS)
