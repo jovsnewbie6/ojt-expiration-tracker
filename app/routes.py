@@ -80,9 +80,31 @@ def save_attachments(record, files):
 def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not current_user.is_authenticated or not getattr(current_user, "is_admin", False):
-            abort(403)
+        if not current_user.is_authenticated:
+            flash("Please sign in as an admin to access that page.", "error")
+            return redirect(url_for("main.admin_login"))
+
+        if not getattr(current_user, "is_admin", False):
+            flash("Admin access is required to view that page.", "error")
+            return redirect(url_for("main.admin_login"))
+
         return view(*args, **kwargs)
+
+    return wrapped
+
+
+def staff_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("Please sign in to access that page.", "error")
+            return redirect(url_for("main.student_login"))
+
+        if getattr(current_user, "is_admin", False) or getattr(current_user, "role", None) in {"coordinator", "faculty"}:
+            return view(*args, **kwargs)
+
+        flash("Staff access is required to view that page.", "error")
+        return redirect(url_for("main.student_portal"))
 
     return wrapped
 
@@ -322,6 +344,8 @@ def student_login():
                 
                 login_user(student)
                 flash("Student login successful.", "success")
+                if student.role != "student":
+                    return redirect(url_for("main.admin_dashboard"))
                 return redirect(url_for("main.student_portal"))
             else:
                 logger.warning(f"Failed student login attempt for student number: {student_number}")
@@ -456,16 +480,15 @@ def admin_login():
 
 @main_bp.route("/admin/logout")
 @login_required
-@admin_required
 def admin_logout():
     logout_user()
-    flash("Admin signed out.", "success")
-    return redirect(url_for("main.admin_login"))
+    flash("Signed out successfully.", "success")
+    return redirect(url_for("main.login_choice"))
 
 
 @main_bp.route("/admin/dashboard")
 @login_required
-@admin_required
+@staff_required
 def admin_dashboard():
     search_term = request.args.get("search", "").strip()
     records_query = StudentRecord.query.order_by(StudentRecord.expiration_date)
@@ -525,7 +548,7 @@ def admin_update_permissions():
 
 @main_bp.route("/admin/edit/<int:record_id>", methods=["GET", "POST"])
 @login_required
-@admin_required
+@staff_required
 def admin_edit(record_id):
     record = StudentRecord.query.get_or_404(record_id)
 
@@ -581,7 +604,7 @@ def admin_edit(record_id):
 
 @main_bp.route("/admin/delete/<int:record_id>", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def admin_delete(record_id):
     record = StudentRecord.query.get_or_404(record_id)
     db.session.delete(record)
@@ -621,7 +644,7 @@ def toggle_user_status(user_type, user_id):
 
 @main_bp.route("/admin/manage-students")
 @login_required
-@admin_required
+@staff_required
 def admin_manage_students():
     """Display and manage student account status."""
     students = Student.query.order_by(Student.created_at.desc()).all()
@@ -637,11 +660,19 @@ def admin_manage_staff():
     return render_template("manage_staff.html", users=users)
 
 
+@main_bp.route("/admin/edit-user-access", methods=["POST"])
 @main_bp.route("/admin/edit-user-access/<int:user_id>", methods=["POST"])
 @login_required
 @admin_required
-def edit_user_access(user_id):
+def edit_user_access(user_id=None):
     """Update a user's role and permissions."""
+    if user_id is None:
+        user_id_str = request.form.get("user_id", "").strip()
+        if not user_id_str.isdigit():
+            flash("No user selected for access modification.", "error")
+            return redirect(url_for("main.admin_manage_staff"))
+        user_id = int(user_id_str)
+
     user = User.query.get_or_404(user_id)
     
     try:
@@ -679,11 +710,19 @@ def edit_user_access(user_id):
     return redirect(url_for("main.admin_manage_staff"))
 
 
+@main_bp.route("/admin/modify-student-access", methods=["POST"])
 @main_bp.route("/admin/modify-student-access/<int:student_id>", methods=["POST"])
 @login_required
 @admin_required
-def modify_student_access(student_id):
+def modify_student_access(student_id=None):
     """Update a student's role and permissions (promotion to faculty/coordinator)."""
+    if student_id is None:
+        student_id_str = request.form.get("student_id", "").strip()
+        if not student_id_str.isdigit():
+            flash("No student selected for access modification.", "error")
+            return redirect(url_for("main.admin_manage_students"))
+        student_id = int(student_id_str)
+
     student = Student.query.get_or_404(student_id)
     
     try:
@@ -718,7 +757,7 @@ def modify_student_access(student_id):
 
 @main_bp.route("/admin/download-report")
 @login_required
-@admin_required
+@staff_required
 def admin_download_report():
     records = StudentRecord.query.order_by(StudentRecord.expiration_date).all()
     output = io.StringIO()
@@ -758,7 +797,7 @@ def admin_download_report():
 
 @main_bp.route("/admin/export-approved")
 @login_required
-@admin_required
+@staff_required
 def export_approved():
     approved_records = StudentRecord.query.filter_by(status="Approved").order_by(StudentRecord.expiration_date).all()
 

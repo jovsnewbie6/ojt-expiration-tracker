@@ -13,6 +13,12 @@ user_permissions = db.Table(
     db.Column("permission_id", db.Integer, db.ForeignKey("permissions.id"), primary_key=True),
 )
 
+student_permissions = db.Table(
+    "student_permissions",
+    db.Column("student_id", db.Integer, db.ForeignKey("students.id"), primary_key=True),
+    db.Column("permission_id", db.Integer, db.ForeignKey("permissions.id"), primary_key=True),
+)
+
 
 class Permission(db.Model):
     __tablename__ = "permissions"
@@ -152,6 +158,12 @@ class Student(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     role = db.Column(db.String(30), nullable=False, default="student")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    permissions = db.relationship(
+        "Permission",
+        secondary=student_permissions,
+        backref=db.backref("students", lazy="dynamic"),
+        lazy="select",
+    )
 
     @property
     def is_admin(self):
@@ -167,4 +179,6 @@ class Student(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def has_permission(self, permission_name):
-        return False
+        if not permission_name:
+            return False
+        return any(permission.name == permission_name for permission in self.permissions)

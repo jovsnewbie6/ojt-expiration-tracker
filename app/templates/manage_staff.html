@@ -111,10 +111,13 @@
                                             <td class="row-actions">
                                                 <button
                                                     type="button"
-                                                    class="edit-link"
+                                                    class="edit-link edit-access-button"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#editAccessModal"
-                                                    onclick="populateModal({{ user.id }}, '{{ user.username }}', '{{ user.role }}', {{ [{'name': p.name} for p in user.permissions] | tojson }})">
+                                                    data-user-id="{{ user.id }}"
+                                                    data-username='{{ user.username|tojson }}'
+                                                    data-user-role='{{ user.role|tojson }}'
+                                                    data-user-permissions='{{ user.permissions|map(attribute='name')|list|tojson }}'>
                                                     Edit Access
                                                 </button>
                                                 <form method="post" action="{{ url_for('main.toggle_user_status', user_type='admin', user_id=user.id) }}" style="display: inline;">
@@ -146,7 +149,8 @@
                     <h5 class="modal-title" id="editAccessLabel">Edit User Access</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="editAccessForm" method="post">
+                <form id="editAccessForm" method="post" action="{{ url_for('main.edit_user_access') }}">
+                    <input type="hidden" id="modalUserId" name="user_id" value="" />
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="modalUsername" class="form-label" style="font-weight: 600;">Username</label>
@@ -215,8 +219,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function populateModal(userId, username, role, permissions) {
-            // Set the form action to the correct user edit endpoint
-            document.getElementById('editAccessForm').action = `/admin/edit-user-access/${userId}`;
+            // Set the hidden user ID so the server knows which user to update
+            document.getElementById('modalUserId').value = userId;
             
             // Populate basic fields
             document.getElementById('modalUsername').value = username;
@@ -231,13 +235,24 @@
             // Check the user's current permissions
             if (Array.isArray(permissions) && permissions.length > 0) {
                 permissions.forEach(perm => {
-                    const checkbox = document.querySelector(`input[name="permissions"][value="${perm.name}"]`);
+                    const checkbox = document.querySelector(`input[name="permissions"][value="${perm}"]`);
                     if (checkbox) {
                         checkbox.checked = true;
                     }
                 });
             }
         }
+
+        document.querySelectorAll('.edit-access-button').forEach(button => {
+            button.addEventListener('click', function () {
+                const userId = this.dataset.userId;
+                const username = JSON.parse(this.dataset.username || '""');
+                const role = JSON.parse(this.dataset.userRole || '""');
+                const permissions = JSON.parse(this.dataset.userPermissions || '[]');
+
+                populateModal(userId, username, role, permissions);
+            });
+        });
     </script>
 </body>
 </html>

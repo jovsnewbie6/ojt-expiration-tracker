@@ -48,6 +48,17 @@ def _ensure_sqlite_columns(app):
                 conn.execute(text(f"ALTER TABLE student_records ADD COLUMN {name} {type_} DEFAULT {default}"))
         conn.commit()
 
+        result = conn.execute(text("PRAGMA table_info(students)"))
+        student_columns = {row[1] for row in result}
+        student_columns_to_add = [
+            ("role", "VARCHAR(30)", "'student'"),
+        ]
+
+        for name, type_, default in student_columns_to_add:
+            if name not in student_columns:
+                conn.execute(text(f"ALTER TABLE students ADD COLUMN {name} {type_} DEFAULT {default}"))
+        conn.commit()
+
 
 def _create_default_admin_user(app):
     from app.models import User
