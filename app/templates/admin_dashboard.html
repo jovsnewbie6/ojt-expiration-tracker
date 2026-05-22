@@ -87,51 +87,59 @@
                     </div>
                 </div>
 
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Student</th>
-                                <th>Year</th>
-                                <th>Section</th>
-                                <th>Status</th>
-                                <th>Complete</th>
-                                <th>Days Left</th>
-                                <th>Attachments</th>
-                                <th>Missing Items</th>
-                                <th>Review</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for record in records %}
-                                <tr class="{% if record.status == 'Incomplete' %}expired{% elif record.status == 'Pending' %}expiring{% endif %}">
-                                    <td>{{ record.name }}</td>
-                                    <td>{{ record.year_only }}</td>
-                                    <td>{{ record.section_only or 'N/A' }}</td>
-                                    <td>
-                                        {% if record.status == 'Approved' %}
-                                            Approved but not Visited
-                                        {% elif record.status == 'Practicum Visited' %}
-                                            Approved and Visited
-                                        {% else %}
-                                            {{ record.status }}
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ 'Yes' if record.is_complete else 'No' }}</td>
-                                    <td>{{ record.days_left }}</td>
-                                    <td>{{ record.attachment_items | length }}</td>
-                                    <td>{{ record.missing_requirements | join(', ') }}</td>
-                                    <td class="row-actions">
-                                        <a class="edit-link" href="{{ url_for('main.admin_edit', record_id=record.id) }}">Edit</a>
-                                        <form method="post" action="{{ url_for('main.admin_delete', record_id=record.id) }}" onsubmit="return confirm('Delete this submission?');">
-                                            <button class="delete-button" type="submit">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                {% for year, sections in grouped_records.items() %}
+                    <section class="panel section-group">
+                        <div class="panel-header">
+                            <h3>Year {{ year }}</h3>
+                        </div>
+                        {% for section, section_records in sections.items() %}
+                            <div style="margin-bottom: 24px;">
+                                <h4 style="margin: 0 0 12px 0; font-size: 1rem;">Section {{ section }}</h4>
+                                <div class="table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Student</th>
+                                                <th>Status</th>
+                                                <th>Complete</th>
+                                                <th>Days Left</th>
+                                                <th>Attachments</th>
+                                                <th>Missing Items</th>
+                                                <th>Review</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in section_records %}
+                                                <tr class="{% if record.status == 'Incomplete' %}expired{% elif record.status == 'Pending' %}expiring{% endif %}">
+                                                    <td>{{ record.name }}</td>
+                                                    <td>
+                                                        {% if record.status == 'Approved' %}
+                                                            Approved but not Visited
+                                                        {% elif record.status == 'Practicum Visited' %}
+                                                            Approved and Visited
+                                                        {% else %}
+                                                            {{ record.status }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ 'Yes' if record.is_complete else 'No' }}</td>
+                                                    <td>{{ record.days_left }}</td>
+                                                    <td>{{ record.attachment_items | length }}</td>
+                                                    <td>{{ record.missing_requirements | join(', ') }}</td>
+                                                    <td class="row-actions">
+                                                        <a class="edit-link" href="{{ url_for('main.admin_edit', record_id=record.id) }}">Edit</a>
+                                                        <form method="post" action="{{ url_for('main.admin_delete', record_id=record.id) }}" onsubmit="return confirm('Delete this submission?');">
+                                                            <button class="delete-button" type="submit">Delete</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </section>
+                {% endfor %}
             </section>
 
             <section class="panel help-panel">

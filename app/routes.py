@@ -2,8 +2,10 @@ import csv
 import io
 import json
 import os
+import re
 import uuid
 import logging
+from collections import defaultdict
 from datetime import datetime
 
 from flask import (
@@ -497,6 +499,20 @@ def admin_dashboard():
         records_query = records_query.filter(func.lower(StudentRecord.name).contains(search_term.lower()))
 
     records = records_query.all()
+    grouped_records = {}
+    for record in records:
+        year_label = record.year_only or "N/A"
+        section_label = record.section_only or "N/A"
+        grouped_records.setdefault(year_label, {}).setdefault(section_label, []).append(record)
+
+    grouped_records = {
+        year: {
+            section: grouped_records[year][section]
+            for section in sorted(grouped_records[year].keys(), key=str.lower)
+        }
+        for year in sorted(grouped_records.keys(), key=str.lower)
+    }
+
     totals = {
         "pending": StudentRecord.query.filter_by(status="Pending").count(),
         "incomplete": StudentRecord.query.filter_by(status="Incomplete").count(),
@@ -506,6 +522,7 @@ def admin_dashboard():
     return render_template(
         "admin_dashboard.html",
         records=records,
+        grouped_records=grouped_records,
         totals=totals,
         requirement_fields=REQUIREMENT_FIELDS,
         search_term=search_term,
@@ -643,13 +660,40 @@ def toggle_user_status(user_type, user_id):
     return redirect(request.referrer or url_for("main.admin_dashboard"))
 
 
+def normalize_year_section(section):
+    if not section:
+        return "Unassigned"
+
+    normalized = re.sub(r"\s+DIT\s*$", "", section.strip(), flags=re.IGNORECASE)
+    normalized = normalized.strip()
+
+    if normalized.lower().startswith("3-"):
+        section_part = normalized.split()[0]
+        return section_part.upper()
+
+    return normalized
+
+
 @main_bp.route("/admin/manage-students")
 @login_required
 @staff_required
 def admin_manage_students():
     """Display and manage student account status."""
-    students = Student.query.order_by(Student.created_at.desc()).all()
-    return render_template("manage_students.html", students=students)
+    students = Student.query.order_by(Student.name).all()
+    section_groups = defaultdict(list)
+    for student in students:
+        section_key = normalize_year_section(student.year_section)
+        section_groups[section_key].append(student)
+
+    ordered_section_groups = sorted(
+        section_groups.items(),
+        key=lambda item: item[0].lower(),
+    )
+
+    return render_template(
+        "manage_students.html",
+        section_groups=ordered_section_groups,
+    )
 
 
 @main_bp.route("/admin/manage-staff")

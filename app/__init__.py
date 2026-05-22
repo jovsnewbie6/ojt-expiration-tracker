@@ -151,24 +151,27 @@ def create_app(config_class=Config):
             # Create all database tables (works with both SQLite and Postgres)
             db.create_all()
             
-            # Expand password_hash column for Neon PostgreSQL (prevent StringDataRightTruncation error)
-            try:
-                db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256)"))
-                db.session.commit()
-                app.logger.info("Password hash column expanded to VARCHAR(256)")
-            except Exception as e:
-                app.logger.warning(f"Could not expand password_hash column: {e}")
-                # This might fail if column is already 256 or table doesn't exist yet, which is fine
-            
-            # Expand password_hash column in students table as well
-            try:
-                db.session.execute(text("ALTER TABLE students ALTER COLUMN password_hash TYPE VARCHAR(256)"))
-                db.session.commit()
-                app.logger.info("Students password_hash column expanded to VARCHAR(256)")
-            except Exception as e:
-                app.logger.warning(f"Could not expand students password_hash column: {e}")
-                # This might fail if column is already 256 or table doesn't exist yet, which is fine
-            
+            if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
+                # Expand password_hash column for Neon PostgreSQL (prevent StringDataRightTruncation error)
+                try:
+                    db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256)"))
+                    db.session.commit()
+                    app.logger.info("Password hash column expanded to VARCHAR(256)")
+                except Exception as e:
+                    app.logger.warning(f"Could not expand password_hash column: {e}")
+                    # This might fail if column is already 256 or table doesn't exist yet, which is fine
+                
+                # Expand password_hash column in students table as well
+                try:
+                    db.session.execute(text("ALTER TABLE students ALTER COLUMN password_hash TYPE VARCHAR(256)"))
+                    db.session.commit()
+                    app.logger.info("Students password_hash column expanded to VARCHAR(256)")
+                except Exception as e:
+                    app.logger.warning(f"Could not expand students password_hash column: {e}")
+                    # This might fail if column is already 256 or table doesn't exist yet, which is fine
+            else:
+                app.logger.info("Skipping password_hash expansion on SQLite")
+
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
             # Seed core RBAC permissions automatically
