@@ -14,4 +14,4 @@ RUN mkdir -p uploads
 
 EXPOSE 5000
 
-CMD ["gunicorn", "app:app", "--workers", "3", "--bind", "0.0.0.0:5000"]
+CMD ["gunicorn", "wsgi:app", "--workers", "3", "--bind", "0.0.0.0:5000"]
