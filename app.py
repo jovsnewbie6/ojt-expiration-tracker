@@ -1,8 +1,8 @@
-import os
+from flask import Flask
+from config import Config
+from flask_sqlalchemy import SQLAlchemy
 
-database_url = os.getenv("DATABASE_URL")
+app = Flask(__name__)
+app.config.from_object(Config)
 
-if database_url and database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+db = SQLAlchemy(app)

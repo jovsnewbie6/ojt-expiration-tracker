@@ -50,20 +50,27 @@ REQUIREMENT_FIELDS = [
 def ensure_database_connection():
     """Ensure database connection is alive before processing request."""
     from sqlalchemy.exc import OperationalError
+    from sqlalchemy import text
+
     try:
         # Test the connection with a simple ping
-        db.session.execute("SELECT 1")
+        db.session.execute(text("SELECT 1"))
+
     except OperationalError:
         logger.warning("Database connection lost, disposing pool and retrying...")
+
         # Dispose of the engine to force a new connection
         db.engine.dispose()
+
         try:
-            db.session.execute("SELECT 1")
+            db.session.execute(text("SELECT 1"))
             logger.info("Database connection re-established successfully")
+
         except Exception as e:
-            logger.error(f"Could not re-establish database connection: {str(e)}")
+            logger.error(f"Could not re-establish database connection: {str(e)}", exc_info=True)
+
     except Exception as e:
-        logger.warning(f"Non-critical error in before_request: {str(e)}")
+        logger.warning(f"Non-critical error in before_request: {str(e)}", exc_info=True)
 
 
 @main_bp.route("/health", methods=["GET"])
@@ -578,15 +585,27 @@ def admin_login():
         return redirect(url_for("main.admin_dashboard"))
 
     if request.method == "POST":
+        # Check database connection first
+        from app.decorators import check_database_connection
+        db_connected, db_error = check_database_connection()
+        if not db_connected:
+            logger.error(f"Database connection failed during admin login: {db_error}")
+            error_detail = (db_error[:50] if db_error else "Unknown error")
+            flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+            return render_template("admin_login.html", is_admin=current_user.is_authenticated)
+        
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        
+        if not username or not password:
+            flash("Please provide both username and password.", "error")
+            return render_template("admin_login.html", is_admin=current_user.is_authenticated)
+        
+        # Query for admin user
         try:
-            username = request.form.get("username", "").strip()
-            password = request.form.get("password", "").strip()
-            
-            if not username or not password:
-                flash("Please provide both username and password.", "error")
-                return render_template("admin_login.html", is_admin=current_user.is_authenticated)
-            
+            logger.info(f"Looking up admin user: {username}")
             admin = User.query.filter_by(username=username, role="admin").first()
+            logger.info(f"Admin user lookup result: {admin}")
 
             if admin and admin.check_password(password):
                 # Check if account is active
@@ -603,9 +622,15 @@ def admin_login():
                 logger.warning(f"Failed admin login attempt for username: {username}")
                 flash("Invalid admin credentials.", "error")
         except Exception as e:
-            logger.exception(f"Admin login error: {str(e)}")
-            current_app.logger.error(f"Admin login error: {str(e)}", exc_info=True)
-            flash("An error occurred during login. Please try again or contact support.", "error")
+            logger.error(f"Database error during admin login for {username}", exc_info=True)
+            logger.error(f"Exception type: {type(e).__name__}, Details: {str(e)}")
+            error_str = str(e).lower()
+            if "connection" in error_str or "timeout" in error_str or "pool" in error_str:
+                flash("Database connection error. Please try again.", "error")
+            elif "table" in error_str or "does not exist" in error_str:
+                flash("System error: database not initialized. Contact support.", "error")
+            else:
+                flash("An error occurred during login. Please try again or contact support.", "error")
 
     return render_template(
         "admin_login.html",
