@@ -10,7 +10,8 @@ app.config.from_object(Config)
 db.init_app(app)
 
 # Import ALL models
-import app.models
+from app.models import User, Student, StudentRecord, Permission
+print("Tables in metadata:", db.metadata.tables.keys())
 
 # Register blueprints
 from app.routes import main_bp
