@@ -1,7 +1,24 @@
 from functools import wraps
+import logging
 
-from flask import abort, redirect, url_for
+from flask import abort, redirect, url_for, current_app
 from flask_login import current_user
+from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
+
+
+def check_database_connection():
+    """Verify database is accessible before performing critical operations."""
+    try:
+        from app import db
+        # Attempt a simple database query
+        db.session.execute(text("SELECT 1"))
+        db.session.commit()
+        return True, None
+    except Exception as e:
+        logger.error(f"Database connection check failed: {str(e)}")
+        return False, str(e)
 
 
 def permission_required(permission_name):

@@ -261,20 +261,38 @@ def student_register():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
+        # Check database connection first
+        from app.decorators import check_database_connection
+        db_connected, db_error = check_database_connection()
+        if not db_connected:
+            logger.error(f"Database connection failed during registration: {db_error}")
+            error_detail = (db_error[:50] if db_error else "Unknown error")
+            flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+            return render_template("register.html")
+
+        student_number = request.form.get("student_number", "").strip()
+        full_name = request.form.get("full_name", "").strip()
+        year_section = request.form.get("year_section", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if not student_number or not full_name or not year_section or not password:
+            flash("Please complete all registration fields.", "error")
+            return render_template("register.html")
+
+        # Check if student already exists
         try:
-            student_number = request.form.get("student_number", "").strip()
-            full_name = request.form.get("full_name", "").strip()
-            year_section = request.form.get("year_section", "").strip()
-            password = request.form.get("password", "").strip()
-
-            if not student_number or not full_name or not year_section or not password:
-                flash("Please complete all registration fields.", "error")
-                return render_template("register.html")
-
-            if Student.query.filter_by(student_number=student_number).first():
+            existing_student = Student.query.filter_by(student_number=student_number).first()
+            if existing_student:
+                logger.info(f"Registration attempt with existing student number: {student_number}")
                 flash("That student number is already registered.", "error")
                 return render_template("register.html")
+        except Exception as e:
+            logger.error(f"Database error checking for existing student: {str(e)}", exc_info=True)
+            flash("Database error. Please try again or contact support.", "error")
+            return render_template("register.html")
 
+        # Create and save new student
+        try:
             student = Student(
                 student_number=student_number,
                 name=full_name,
@@ -283,16 +301,26 @@ def student_register():
             )
             student.set_password(password)
             db.session.add(student)
+            db.session.flush()  # Flush to detect constraint violations early
             db.session.commit()
-
+            
             logger.info(f"Student registration successful for: {student_number}")
             flash("Registration successful. Please log in.", "success")
             return redirect(url_for("main.student_login"))
         except Exception as e:
             db.session.rollback()
-            logger.exception(f"Student registration error - Student Number: {request.form.get('student_number', 'unknown')}, Error Details: {str(e)}")
-            current_app.logger.error(f"Student registration error: {str(e)}", exc_info=True)
-            flash("An error occurred during registration. Please try again or contact support.", "error")
+            logger.error(f"Error during student registration for {student_number}", exc_info=True)
+            logger.error(f"Exception type: {type(e).__name__}, Details: {str(e)}")
+            
+            # Provide more specific error messages
+            error_msg = str(e).lower()
+            if "unique" in error_msg or "duplicate" in error_msg:
+                flash("This student number is already registered.", "error")
+            elif "constraint" in error_msg:
+                flash("Invalid data provided. Please check your inputs.", "error")
+            else:
+                flash("An error occurred during registration. Please try again or contact support.", "error")
+            
             return render_template("register.html")
 
     return render_template("register.html")
@@ -437,39 +465,56 @@ def student_forgot_password():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
+        # Check database connection first
+        from app.decorators import check_database_connection
+        db_connected, db_error = check_database_connection()
+        if not db_connected:
+            logger.error(f"Database connection failed during password reset: {db_error}")
+            error_detail = (db_error[:50] if db_error else "Unknown error")
+            flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+            return render_template("student_forgot_password.html")
+
+        student_number = request.form.get("student_number", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        if not student_number or not new_password or not confirm_password:
+            flash("Please complete all fields.", "error")
+            return render_template("student_forgot_password.html")
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("student_forgot_password.html")
+
+        if len(new_password) < 6:
+            flash("Password must be at least 6 characters long.", "error")
+            return render_template("student_forgot_password.html")
+
+        # Find student
         try:
-            student_number = request.form.get("student_number", "").strip()
-            new_password = request.form.get("new_password", "").strip()
-            confirm_password = request.form.get("confirm_password", "").strip()
-
-            if not student_number or not new_password or not confirm_password:
-                flash("Please complete all fields.", "error")
-                return render_template("student_forgot_password.html")
-
             student = Student.query.filter_by(student_number=student_number).first()
             if not student:
                 logger.warning(f"Password reset attempt for non-existent student: {student_number}")
                 flash("Student number not found.", "error")
                 return render_template("student_forgot_password.html")
+        except Exception as e:
+            logger.error(f"Database error finding student {student_number}: {str(e)}", exc_info=True)
+            flash("Database error. Please try again or contact support.", "error")
+            return render_template("student_forgot_password.html")
 
-            if new_password != confirm_password:
-                flash("Passwords do not match.", "error")
-                return render_template("student_forgot_password.html")
-
-            if len(new_password) < 6:
-                flash("Password must be at least 6 characters long.", "error")
-                return render_template("student_forgot_password.html")
-
+        # Update password
+        try:
             student.set_password(new_password)
+            db.session.flush()  # Flush to detect issues early
             db.session.commit()
-
+            
             logger.info(f"Password reset successful for student: {student_number}")
             flash("Your password has been reset successfully. Please log in.", "success")
             return redirect(url_for("main.student_login"))
         except Exception as e:
             db.session.rollback()
-            logger.exception(f"Password reset error for student {request.form.get('student_number', 'unknown')}: {str(e)}")
-            current_app.logger.error(f"Password reset error: {str(e)}", exc_info=True)
+            logger.error(f"Error updating password for student {student_number}", exc_info=True)
+            logger.error(f"Exception type: {type(e).__name__}, Details: {str(e)}")
             flash("An error occurred while resetting your password. Please try again or contact support.", "error")
             return render_template("student_forgot_password.html")
 
@@ -725,25 +770,47 @@ def normalize_year_section(section):
 @staff_required
 def admin_manage_students():
     """Display and manage student account status."""
-    try:
-        students = Student.query.order_by(Student.name).all()
-        section_groups = defaultdict(list)
-        for student in students:
-            section_key = normalize_year_section(student.year_section)
-            section_groups[section_key].append(student)
+    # Check database connection first
+    from app.decorators import check_database_connection
+    db_connected, db_error = check_database_connection()
+    if not db_connected:
+        logger.error(f"Database connection failed in manage_students: {db_error}")
+        error_detail = (db_error[:50] if db_error else "Unknown error")
+        flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+        return redirect(url_for("main.admin_dashboard"))
 
-        ordered_section_groups = sorted(
-            section_groups.items(),
-            key=lambda item: item[0].lower(),
-        )
+    try:
+        # Fetch students with error handling
+        try:
+            students = Student.query.order_by(Student.name).all()
+        except Exception as e:
+            logger.error(f"Database error fetching students: {str(e)}", exc_info=True)
+            flash("Error fetching student data. Please try again or contact support.", "error")
+            return redirect(url_for("main.admin_dashboard"))
+        
+        # Group students by section
+        try:
+            section_groups = defaultdict(list)
+            for student in students:
+                section_key = normalize_year_section(student.year_section)
+                section_groups[section_key].append(student)
+
+            ordered_section_groups = sorted(
+                section_groups.items(),
+                key=lambda item: item[0].lower(),
+            )
+        except Exception as e:
+            logger.error(f"Error grouping students: {str(e)}", exc_info=True)
+            flash("Error processing student data. Please try again or contact support.", "error")
+            return redirect(url_for("main.admin_dashboard"))
 
         return render_template(
             "manage_students.html",
             section_groups=ordered_section_groups,
         )
     except Exception as e:
-        logger.exception(f"Error loading manage students page: {str(e)}")
-        current_app.logger.error(f"Manage students error: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected error in manage_students: {str(e)}", exc_info=True)
+        logger.error(f"Exception type: {type(e).__name__}")
         flash("An error occurred while loading the student management page. Please try again or contact support.", "error")
         return redirect(url_for("main.admin_dashboard"))
 
