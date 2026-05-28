@@ -31,3 +31,19 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     ADMIN_USER = os.getenv("ADMIN_USER", "admin")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+    
+    # SQLAlchemy connection pool settings for Render PostgreSQL
+    # These settings help handle connection issues on managed databases
+    if not _database_url.startswith("sqlite:"):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_size": 5,  # Smaller pool for serverless
+            "pool_recycle": 3600,  # Recycle connections every hour
+            "pool_pre_ping": True,  # Test connection before using it
+            "connect_args": {
+                "connect_timeout": 10,  # 10 second connection timeout
+                "statement_timeout": 30000,  # 30 second query timeout (in ms)
+            },
+        }
+    else:
+        # SQLite doesn't use connection pooling
+        SQLALCHEMY_ENGINE_OPTIONS = {}
