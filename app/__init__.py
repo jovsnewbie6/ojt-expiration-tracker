@@ -146,106 +146,21 @@ def _seed_core_permissions():
 
 
 def create_app(config_class=Config):
-    app = Flask(
-        __name__,
-        template_folder=os.path.join(Path(__file__).resolve().parent, "templates"),
-        static_folder=os.path.join(Path(__file__).resolve().parent, "static"),
-    )
+    app = Flask(__name__)
     app.config.from_object(config_class)
-    
-    # Configure logging
-    if not app.debug:
-        if not app.logger.hasHandlers():
-            handler = logging.StreamHandler()
-            handler.setLevel(logging.INFO)
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            app.logger.addHandler(handler)
-            app.logger.setLevel(logging.INFO)
 
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = "main.login_choice"
-    login_manager.login_message = "Please log in to continue."
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        from app.models import User, Student
-        
-        try:
-            # Parse the user type from the ID (format: "admin_1" or "student_1")
-            if user_id and isinstance(user_id, str):
-                if user_id.startswith("admin_"):
-                    user_id_num = int(user_id.split("_")[1])
-                    return User.query.get(user_id_num)
-                elif user_id.startswith("student_"):
-                    user_id_num = int(user_id.split("_")[1])
-                    return Student.query.get(user_id_num)
-            
-            # Fallback for old-style IDs (for backward compatibility)
-            try:
-                user_id_num = int(user_id) if isinstance(user_id, str) else user_id
-                admin = User.query.get(user_id_num)
-                if admin:
-                    return admin
-                student = Student.query.get(user_id_num)
-                return student
-            except (ValueError, TypeError):
-                return None
-        except Exception as e:
-            app.logger.error(f"Error loading user {user_id}: {str(e)}")
-            return None
+    from app import models  # LOAD MODELS HERE
 
     with app.app_context():
-        from app import models
+        db.create_all()
 
-        try:
-            app.logger.info("Starting database initialization...")
-            # Create all database tables (works with both SQLite and Postgres)
-            db.create_all()
-            app.logger.info("Database tables created successfully")
-            
-            if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
-                app.logger.info("Detected PostgreSQL database")
-                # Fix email constraint on Render/PostgreSQL
-                _fix_email_constraint(app)
-                
-                # Expand password_hash column for Neon PostgreSQL (prevent StringDataRightTruncation error)
-                try:
-                    db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256)"))
-                    db.session.commit()
-                    app.logger.info("Password hash column expanded to VARCHAR(256)")
-                except Exception as e:
-                    db.session.rollback()
-                    app.logger.debug(f"Could not expand users password_hash column: {e}")
-                
-                # Expand password_hash column in students table as well
-                try:
-                    db.session.execute(text("ALTER TABLE students ALTER COLUMN password_hash TYPE VARCHAR(256)"))
-                    db.session.commit()
-                    app.logger.info("Students password_hash column expanded to VARCHAR(256)")
-                except Exception as e:
-                    db.session.rollback()
-                    app.logger.debug(f"Could not expand students password_hash column: {e}")
-            else:
-                app.logger.info("Detected SQLite database")
-
-            # Ensure SQLite schema compatibility on development
-            _ensure_sqlite_columns(app)
-            # Seed core RBAC permissions automatically
-            _seed_core_permissions()
-            # Create default admin user if none exists
-            _create_default_admin_user(app)
-            app.logger.info("Database initialized successfully")
-        except Exception as e:
-            app.logger.error(f"Database initialization error: {e}", exc_info=True)
-            # Don't block app startup if database initialization fails
-            # The app can still handle requests and retry on next startup
-            pass
+        _seed_core_permissions()
+        _create_default_admin_user(app)
 
     from app.routes import main_bp
-
     app.register_blueprint(main_bp)
-    app.jinja_env.globals["getattr"] = getattr
 
     return app
