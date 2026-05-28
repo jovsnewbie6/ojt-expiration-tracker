@@ -60,6 +60,32 @@ def _ensure_sqlite_columns(app):
         conn.commit()
 
 
+def _fix_email_constraint(app):
+    """Remove unique constraint from students.email if it exists (PostgreSQL only)"""
+    if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
+        return
+    
+    try:
+        with db.engine.connect() as conn:
+            # Check if the unique constraint exists
+            result = conn.execute(text("""
+                SELECT constraint_name FROM information_schema.table_constraints 
+                WHERE table_name='students' AND constraint_type='UNIQUE' 
+                AND constraint_name LIKE '%email%'
+            """))
+            constraints = result.fetchall()
+            
+            for constraint in constraints:
+                constraint_name = constraint[0]
+                app.logger.info(f"Dropping unique constraint: {constraint_name}")
+                conn.execute(text(f"ALTER TABLE students DROP CONSTRAINT {constraint_name}"))
+                conn.commit()
+                app.logger.info(f"Successfully dropped constraint: {constraint_name}")
+    except Exception as e:
+        app.logger.warning(f"Could not fix email constraint: {e}")
+        # This is not critical, continue anyway
+
+
 def _create_default_admin_user(app):
     from app.models import User
 
@@ -152,6 +178,9 @@ def create_app(config_class=Config):
             db.create_all()
             
             if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
+                # Fix email constraint on Render/PostgreSQL
+                _fix_email_constraint(app)
+                
                 # Expand password_hash column for Neon PostgreSQL (prevent StringDataRightTruncation error)
                 try:
                     db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256)"))

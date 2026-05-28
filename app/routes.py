@@ -265,12 +265,14 @@ def student_register():
             db.session.add(student)
             db.session.commit()
 
+            logger.info(f"Student registration successful for: {student_number}")
             flash("Registration successful. Please log in.", "success")
             return redirect(url_for("main.student_login"))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Student registration error: {str(e)}")
-            flash("An error occurred during registration. Please try again.", "error")
+            logger.exception(f"Student registration error - Student Number: {request.form.get('student_number', 'unknown')}, Error Details: {str(e)}")
+            current_app.logger.error(f"Student registration error: {str(e)}", exc_info=True)
+            flash("An error occurred during registration. Please try again or contact support.", "error")
             return render_template("register.html")
 
     return render_template("register.html")
@@ -341,10 +343,12 @@ def student_login():
             if student and student.check_password(password):
                 # Check if account is active
                 if not student.is_active:
+                    logger.warning(f"Login attempt for deactivated account: {student_number}")
                     flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
                     return render_template("student_login.html")
                 
                 login_user(student)
+                logger.info(f"Student login successful: {student_number}")
                 flash("Student login successful.", "success")
                 if student.role != "student":
                     return redirect(url_for("main.admin_dashboard"))
@@ -353,8 +357,9 @@ def student_login():
                 logger.warning(f"Failed student login attempt for student number: {student_number}")
                 flash("Invalid student credentials.", "error")
         except Exception as e:
-            logger.error(f"Student login error: {str(e)}")
-            flash("An error occurred during login. Please try again.", "error")
+            logger.exception(f"Student login error: {str(e)}")
+            current_app.logger.error(f"Student login error: {str(e)}", exc_info=True)
+            flash("An error occurred during login. Please try again or contact support.", "error")
 
     return render_template("student_login.html")
 
@@ -412,32 +417,41 @@ def student_forgot_password():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
-        student_number = request.form.get("student_number", "").strip()
-        new_password = request.form.get("new_password", "").strip()
-        confirm_password = request.form.get("confirm_password", "").strip()
+        try:
+            student_number = request.form.get("student_number", "").strip()
+            new_password = request.form.get("new_password", "").strip()
+            confirm_password = request.form.get("confirm_password", "").strip()
 
-        if not student_number or not new_password or not confirm_password:
-            flash("Please complete all fields.", "error")
+            if not student_number or not new_password or not confirm_password:
+                flash("Please complete all fields.", "error")
+                return render_template("student_forgot_password.html")
+
+            student = Student.query.filter_by(student_number=student_number).first()
+            if not student:
+                logger.warning(f"Password reset attempt for non-existent student: {student_number}")
+                flash("Student number not found.", "error")
+                return render_template("student_forgot_password.html")
+
+            if new_password != confirm_password:
+                flash("Passwords do not match.", "error")
+                return render_template("student_forgot_password.html")
+
+            if len(new_password) < 6:
+                flash("Password must be at least 6 characters long.", "error")
+                return render_template("student_forgot_password.html")
+
+            student.set_password(new_password)
+            db.session.commit()
+
+            logger.info(f"Password reset successful for student: {student_number}")
+            flash("Your password has been reset successfully. Please log in.", "success")
+            return redirect(url_for("main.student_login"))
+        except Exception as e:
+            db.session.rollback()
+            logger.exception(f"Password reset error for student {request.form.get('student_number', 'unknown')}: {str(e)}")
+            current_app.logger.error(f"Password reset error: {str(e)}", exc_info=True)
+            flash("An error occurred while resetting your password. Please try again or contact support.", "error")
             return render_template("student_forgot_password.html")
-
-        student = Student.query.filter_by(student_number=student_number).first()
-        if not student:
-            flash("Student number not found.", "error")
-            return render_template("student_forgot_password.html")
-
-        if new_password != confirm_password:
-            flash("Passwords do not match.", "error")
-            return render_template("student_forgot_password.html")
-
-        if len(new_password) < 6:
-            flash("Password must be at least 6 characters long.", "error")
-            return render_template("student_forgot_password.html")
-
-        student.set_password(new_password)
-        db.session.commit()
-
-        flash("Your password has been reset successfully. Please log in.", "success")
-        return redirect(url_for("main.student_login"))
 
     return render_template("student_forgot_password.html")
 
@@ -461,18 +475,21 @@ def admin_login():
             if admin and admin.check_password(password):
                 # Check if account is active
                 if not admin.is_active:
+                    logger.warning(f"Login attempt for deactivated admin account: {username}")
                     flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
                     return render_template("admin_login.html", is_admin=current_user.is_authenticated)
                 
                 login_user(admin)
+                logger.info(f"Admin login successful: {username}")
                 flash("Admin signed in successfully.", "success")
                 return redirect(url_for("main.admin_dashboard"))
             else:
                 logger.warning(f"Failed admin login attempt for username: {username}")
                 flash("Invalid admin credentials.", "error")
         except Exception as e:
-            logger.error(f"Admin login error: {str(e)}")
-            flash("An error occurred during login. Please try again.", "error")
+            logger.exception(f"Admin login error: {str(e)}")
+            current_app.logger.error(f"Admin login error: {str(e)}", exc_info=True)
+            flash("An error occurred during login. Please try again or contact support.", "error")
 
     return render_template(
         "admin_login.html",
@@ -637,26 +654,35 @@ def admin_delete(record_id):
 def toggle_user_status(user_type, user_id):
     """Toggle user active status (soft delete). Only admins can deactivate users."""
     
-    # Prevent director from deactivating their own account
-    if user_type == "admin" and current_user.id == user_id:
-        flash("You cannot deactivate your own account.", "error")
-        return redirect(request.referrer or url_for("main.admin_dashboard"))
+    try:
+        # Prevent director from deactivating their own account
+        if user_type == "admin" and current_user.id == user_id:
+            flash("You cannot deactivate your own account.", "error")
+            return redirect(request.referrer or url_for("main.admin_dashboard"))
+        
+        if user_type == "admin":
+            user = User.query.get_or_404(user_id)
+            user.is_active = not user.is_active
+            action = "deactivated" if not user.is_active else "reactivated"
+            logger.info(f"Admin account '{user.username}' (ID: {user_id}) has been {action}")
+            flash(f"Admin account '{user.username}' has been {action}.", "success")
+        elif user_type == "student":
+            student = Student.query.get_or_404(user_id)
+            student.is_active = not student.is_active
+            action = "deactivated" if not student.is_active else "reactivated"
+            logger.info(f"Student account '{student.name}' ({student.student_number}) has been {action}")
+            flash(f"Student account '{student.name}' ({student.student_number}) has been {action}.", "success")
+        else:
+            flash("Invalid user type.", "error")
+            return redirect(request.referrer or url_for("main.admin_dashboard"))
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error toggling user status for {user_type} ID {user_id}: {str(e)}")
+        current_app.logger.error(f"Error toggling user status: {str(e)}", exc_info=True)
+        flash("An error occurred while updating user status. Please try again or contact support.", "error")
     
-    if user_type == "admin":
-        user = User.query.get_or_404(user_id)
-        user.is_active = not user.is_active
-        action = "deactivated" if not user.is_active else "reactivated"
-        flash(f"Admin account '{user.username}' has been {action}.", "success")
-    elif user_type == "student":
-        student = Student.query.get_or_404(user_id)
-        student.is_active = not student.is_active
-        action = "deactivated" if not student.is_active else "reactivated"
-        flash(f"Student account '{student.name}' ({student.student_number}) has been {action}.", "success")
-    else:
-        flash("Invalid user type.", "error")
-        return redirect(request.referrer or url_for("main.admin_dashboard"))
-    
-    db.session.commit()
     return redirect(request.referrer or url_for("main.admin_dashboard"))
 
 
@@ -679,21 +705,27 @@ def normalize_year_section(section):
 @staff_required
 def admin_manage_students():
     """Display and manage student account status."""
-    students = Student.query.order_by(Student.name).all()
-    section_groups = defaultdict(list)
-    for student in students:
-        section_key = normalize_year_section(student.year_section)
-        section_groups[section_key].append(student)
+    try:
+        students = Student.query.order_by(Student.name).all()
+        section_groups = defaultdict(list)
+        for student in students:
+            section_key = normalize_year_section(student.year_section)
+            section_groups[section_key].append(student)
 
-    ordered_section_groups = sorted(
-        section_groups.items(),
-        key=lambda item: item[0].lower(),
-    )
+        ordered_section_groups = sorted(
+            section_groups.items(),
+            key=lambda item: item[0].lower(),
+        )
 
-    return render_template(
-        "manage_students.html",
-        section_groups=ordered_section_groups,
-    )
+        return render_template(
+            "manage_students.html",
+            section_groups=ordered_section_groups,
+        )
+    except Exception as e:
+        logger.exception(f"Error loading manage students page: {str(e)}")
+        current_app.logger.error(f"Manage students error: {str(e)}", exc_info=True)
+        flash("An error occurred while loading the student management page. Please try again or contact support.", "error")
+        return redirect(url_for("main.admin_dashboard"))
 
 
 @main_bp.route("/admin/manage-staff")
@@ -768,9 +800,9 @@ def modify_student_access(student_id=None):
             return redirect(url_for("main.admin_manage_students"))
         student_id = int(student_id_str)
 
-    student = Student.query.get_or_404(student_id)
-    
     try:
+        student = Student.query.get_or_404(student_id)
+        
         # Update role
         new_role = request.form.get("role", "").strip()
         if new_role not in ["student", "faculty", "coordinator"]:
@@ -790,12 +822,14 @@ def modify_student_access(student_id=None):
                     student.permissions.append(perm_object)
         
         db.session.commit()
+        logger.info(f"Student '{student.name}' (ID: {student_id}) access updated to role: {new_role}")
         flash(f"Student '{student.name}' access updated successfully.", "success")
         
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error updating student access: {str(e)}")
-        flash("An error occurred while updating student access. Please try again.", "error")
+        logger.exception(f"Error updating student access for ID {student_id}: {str(e)}")
+        current_app.logger.error(f"Error updating student access: {str(e)}", exc_info=True)
+        flash("An error occurred while updating student access. Please try again or contact support.", "error")
     
     return redirect(url_for("main.admin_manage_students"))
 
