@@ -85,6 +85,11 @@ if __name__ == "__main__":
     print("PUP MOA Tracking System - Director Account Initialization")
     print("-" * 70)
     
-    success = create_director_account()
-    
-    sys.exit(0 if success else 1)
+    try:
+        success = create_director_account()
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"✗ Fatal error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

@@ -69,6 +69,19 @@ def _fix_email_constraint(app):
         # Only attempt to fix if database is already accessible
         with db.engine.connect() as conn:
             try:
+                # First check if the students table exists
+                result = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = 'students'
+                    )
+                """))
+                table_exists = result.scalar()
+                
+                if not table_exists:
+                    app.logger.debug("Students table does not exist yet, skipping email constraint fix")
+                    return
+                
                 # Check if the unique constraint exists
                 result = conn.execute(text("""
                     SELECT constraint_name FROM information_schema.table_constraints 
@@ -90,7 +103,10 @@ def _fix_email_constraint(app):
             except Exception as e:
                 # Table might not exist yet or query failed
                 app.logger.debug(f"Could not query constraints: {e}")
-                conn.rollback()
+                try:
+                    conn.rollback()
+                except:
+                    pass
     except Exception as e:
         app.logger.debug(f"Could not connect to database for constraint fix: {e}")
         # This is not critical - database might not be ready yet, continue anyway
@@ -184,10 +200,13 @@ def create_app(config_class=Config):
         from app import models
 
         try:
+            app.logger.info("Starting database initialization...")
             # Create all database tables (works with both SQLite and Postgres)
             db.create_all()
+            app.logger.info("Database tables created successfully")
             
             if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:"):
+                app.logger.info("Detected PostgreSQL database")
                 # Fix email constraint on Render/PostgreSQL
                 _fix_email_constraint(app)
                 
@@ -197,8 +216,8 @@ def create_app(config_class=Config):
                     db.session.commit()
                     app.logger.info("Password hash column expanded to VARCHAR(256)")
                 except Exception as e:
-                    app.logger.warning(f"Could not expand password_hash column: {e}")
-                    # This might fail if column is already 256 or table doesn't exist yet, which is fine
+                    db.session.rollback()
+                    app.logger.debug(f"Could not expand users password_hash column: {e}")
                 
                 # Expand password_hash column in students table as well
                 try:
@@ -206,10 +225,10 @@ def create_app(config_class=Config):
                     db.session.commit()
                     app.logger.info("Students password_hash column expanded to VARCHAR(256)")
                 except Exception as e:
-                    app.logger.warning(f"Could not expand students password_hash column: {e}")
-                    # This might fail if column is already 256 or table doesn't exist yet, which is fine
+                    db.session.rollback()
+                    app.logger.debug(f"Could not expand students password_hash column: {e}")
             else:
-                app.logger.info("Skipping password_hash expansion on SQLite")
+                app.logger.info("Detected SQLite database")
 
             # Ensure SQLite schema compatibility on development
             _ensure_sqlite_columns(app)
@@ -219,8 +238,10 @@ def create_app(config_class=Config):
             _create_default_admin_user(app)
             app.logger.info("Database initialized successfully")
         except Exception as e:
-            app.logger.error(f"Database initialization error: {e}")
-            raise
+            app.logger.error(f"Database initialization error: {e}", exc_info=True)
+            # Don't block app startup if database initialization fails
+            # The app can still handle requests and retry on next startup
+            pass
 
     from app.routes import main_bp
 

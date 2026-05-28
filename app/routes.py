@@ -46,6 +46,26 @@ REQUIREMENT_FIELDS = [
 ]
 
 
+@main_bp.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint for monitoring and debugging."""
+    try:
+        from sqlalchemy import text
+        # Try to query the database
+        db.session.execute(text("SELECT 1"))
+        db.session.commit()
+        return {
+            "status": "healthy",
+            "database": "connected"
+        }, 200
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }, 500
+
+
 def parse_integer(value, default=0):
     try:
         return int(value)
