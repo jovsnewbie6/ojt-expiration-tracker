@@ -6,9 +6,10 @@ services:
     branch: whigan
     runtime: python-3.12
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn wsgi:app
     autoDeploy: true
     preDeployCommand: python setup_admin.py && python create_director.py
+
     
     customDomains:
       - your.custom.domain

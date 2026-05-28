@@ -66,24 +66,34 @@ def _fix_email_constraint(app):
         return
     
     try:
+        # Only attempt to fix if database is already accessible
         with db.engine.connect() as conn:
-            # Check if the unique constraint exists
-            result = conn.execute(text("""
-                SELECT constraint_name FROM information_schema.table_constraints 
-                WHERE table_name='students' AND constraint_type='UNIQUE' 
-                AND constraint_name LIKE '%email%'
-            """))
-            constraints = result.fetchall()
-            
-            for constraint in constraints:
-                constraint_name = constraint[0]
-                app.logger.info(f"Dropping unique constraint: {constraint_name}")
-                conn.execute(text(f"ALTER TABLE students DROP CONSTRAINT {constraint_name}"))
-                conn.commit()
-                app.logger.info(f"Successfully dropped constraint: {constraint_name}")
+            try:
+                # Check if the unique constraint exists
+                result = conn.execute(text("""
+                    SELECT constraint_name FROM information_schema.table_constraints 
+                    WHERE table_name='students' AND constraint_type='UNIQUE' 
+                    AND constraint_name LIKE '%email%'
+                """))
+                constraints = result.fetchall()
+                
+                for constraint in constraints:
+                    constraint_name = constraint[0]
+                    app.logger.info(f"Dropping unique constraint: {constraint_name}")
+                    try:
+                        conn.execute(text(f"ALTER TABLE students DROP CONSTRAINT IF EXISTS {constraint_name}"))
+                        conn.commit()
+                        app.logger.info(f"Successfully dropped constraint: {constraint_name}")
+                    except Exception as e:
+                        app.logger.debug(f"Could not drop constraint {constraint_name}: {e}")
+                        conn.rollback()
+            except Exception as e:
+                # Table might not exist yet or query failed
+                app.logger.debug(f"Could not query constraints: {e}")
+                conn.rollback()
     except Exception as e:
-        app.logger.warning(f"Could not fix email constraint: {e}")
-        # This is not critical, continue anyway
+        app.logger.debug(f"Could not connect to database for constraint fix: {e}")
+        # This is not critical - database might not be ready yet, continue anyway
 
 
 def _create_default_admin_user(app):
