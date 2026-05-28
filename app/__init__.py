@@ -9,10 +9,6 @@ from sqlalchemy import text
 
 from config import Config
 
-basedir = Path(__file__).resolve().parent.parent
-
-# SQLAlchemy setup - supports both SQLite (development) and Postgres (production)
-# Database URL is configured in config.py with automatic postgres:// → postgresql:// conversion
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -149,17 +145,49 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
 
-    from app import models  # LOAD MODELS HERE
+    login_manager.login_view = "main.login_choice"
+    login_manager.login_message = "Please log in to continue."
 
+    # IMPORT MODELS HERE (VERY IMPORTANT)
+    from app import models
+
+    # USER LOADER MUST BE INSIDE create_app OR ABOVE? (SAFE INSIDE IS OK HERE)
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User, Student
+
+        try:
+            if user_id and isinstance(user_id, str):
+                if user_id.startswith("admin_"):
+                    return User.query.get(int(user_id.split("_")[1]))
+                elif user_id.startswith("student_"):
+                    return Student.query.get(int(user_id.split("_")[1]))
+
+            return User.query.get(user_id) or Student.query.get(user_id)
+
+        except Exception:
+            return None
+
+    # DATABASE INITIALIZATION (ONLY HERE)
     with app.app_context():
-        db.create_all()
+        try:
+            app.logger.info("Initializing database...")
 
-        _seed_core_permissions()
-        _create_default_admin_user(app)
+            db.create_all()
 
+            _seed_core_permissions()
+            _create_default_admin_user(app)
+
+            app.logger.info("Database initialized successfully")
+
+        except Exception as e:
+            app.logger.error(f"DB init error: {e}", exc_info=True)
+
+    # REGISTER ROUTES
     from app.routes import main_bp
     app.register_blueprint(main_bp)
 
