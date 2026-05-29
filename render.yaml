@@ -8,7 +8,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn wsgi:app
     autoDeploy: true
-    preDeployCommand: python setup_admin.py || true
+    preDeployCommand: flask db upgrade && python setup_admin.py || true
 
     
     customDomains:

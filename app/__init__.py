@@ -72,6 +72,17 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
 
     # -------------------
+    # ENSURE DATABASE TABLES EXIST
+    # -------------------
+    with app.app_context():
+        try:
+            # Try to create tables if they don't exist (fallback for new deployments)
+            db.create_all()
+            app.logger.info("Database tables verified/created successfully")
+        except Exception as e:
+            app.logger.warning(f"Could not auto-create tables: {e}")
+
+    # -------------------
     # LOGGING
     # -------------------
     if not app.debug:
