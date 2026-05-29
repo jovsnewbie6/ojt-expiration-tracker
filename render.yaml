@@ -5,34 +5,29 @@ services:
     plan: free
     branch: whigan
     runtime: python-3.12
+
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app
-    autoDeploy: true
+
+    # Run migrations first, then ensure admin exists
     preDeployCommand: flask db upgrade && python setup_admin.py
 
-    
-    customDomains:
-      - your.custom.domain
-    
+    # Start the Flask app
+    startCommand: gunicorn wsgi:app
+
+    autoDeploy: true
+
     envVars:
-      # Flask Configuration
       - key: FLASK_ENV
         value: production
-      
-      # Database: Set via Render Dashboard or here
-      # Leave blank and configure via Render Dashboard Environment tab
-      # Example: postgresql://user:pass@ep-xxxxx.neon.tech/dbname?sslmode=require
+
       - key: DATABASE_URL
-        sync: false  # Configure in Render dashboard instead
-      
-      # Security: Must set via Render Dashboard for production
+        sync: false
+
       - key: SECRET_KEY
-        sync: false  # Configure in Render dashboard instead
-      
-      # Director Account Setup (change these!)
+        sync: false
+
       - key: DIRECTOR_USERNAME
         value: director
-      
-      - key: DIRECTOR_PASSWORD
-        sync: false  # Configure in Render dashboard instead
 
+      - key: DIRECTOR_PASSWORD
+        sync: false
