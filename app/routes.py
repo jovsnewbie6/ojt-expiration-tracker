@@ -284,12 +284,11 @@ def student_register():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
-        # Check database connection first
-        from app.decorators import check_database_connection
-        db_connected, db_error = check_database_connection()
-        if not db_connected:
-            logger.error("Database connection failed during registration")
-            flash("Database connection error. Please try again.", "error")
+        # Ensure database is ready
+        from app.database_init import ensure_database_ready
+        if not ensure_database_ready():
+            logger.error("Database not ready during registration")
+            flash("Database not ready. Please try again in a moment.", "error")
             return render_template("register.html")
 
         student_number = request.form.get("student_number", "").strip()
@@ -308,15 +307,19 @@ def student_register():
                 flash("That student number is already registered.", "error")
                 return render_template("register.html")
         except Exception as e:
-            logger.error("Database error during registration duplicate check")
+            logger.error("Database error during registration duplicate check", exc_info=True)
             # Try to identify the specific issue
             error_str = str(e).lower()
             if "connection" in error_str or "timeout" in error_str:
-                flash("Database connection timeout. Please try again.", "error")
+                flash("Database connection error. Please try again.", "error")
             elif "table" in error_str or "does not exist" in error_str:
-                flash("System error: database tables not initialized. Please contact support.", "error")
+                logger.error("Tables not found - attempting to initialize")
+                if ensure_database_ready():
+                    flash("Database initialized. Please try registering again.", "success")
+                else:
+                    flash("Database error. Please contact support.", "error")
             else:
-                flash("Database error. Please try again or contact support.", "error")
+                flash("An error occurred. Please try again.", "error")
             return render_template("register.html")
 
         # Create and save new student
@@ -346,7 +349,7 @@ def student_register():
             elif "constraint" in error_msg:
                 flash("Invalid data provided. Please check your inputs.", "error")
             else:
-                flash("An error occurred during registration. Please try again or contact support.", "error")
+                flash("An error occurred during registration. Please try again.", "error")
             
             return render_template("register.html")
 
@@ -491,12 +494,11 @@ def student_forgot_password():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
-        # Check database connection first
-        from app.decorators import check_database_connection
-        db_connected, db_error = check_database_connection()
-        if not db_connected:
-            logger.error("Database connection failed during password reset")
-            flash("Database connection error. Please try again.", "error")
+        # Ensure database is ready
+        from app.database_init import ensure_database_ready
+        if not ensure_database_ready():
+            logger.error("Database not ready during password reset")
+            flash("Database not ready. Please try again in a moment.", "error")
             return render_template("student_forgot_password.html")
 
         student_number = request.form.get("student_number", "").strip()
@@ -528,7 +530,11 @@ def student_forgot_password():
             if "connection" in error_str or "timeout" in error_str or "pool" in error_str:
                 flash("Database connection error. Please try again.", "error")
             elif "table" in error_str or "does not exist" in error_str:
-                flash("System error: database not initialized. Contact support.", "error")
+                logger.error("Tables not found - attempting to initialize")
+                if ensure_database_ready():
+                    flash("Database initialized. Please try again.", "success")
+                else:
+                    flash("Database error. Please contact support.", "error")
             else:
                 flash("Database error. Please try again.", "error")
             return render_template("student_forgot_password.html")

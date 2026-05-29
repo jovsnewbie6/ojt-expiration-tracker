@@ -75,12 +75,12 @@ def create_app(config_class=Config):
     # ENSURE DATABASE TABLES EXIST
     # -------------------
     with app.app_context():
+        from app.database_init import ensure_database_ready
         try:
-            # Try to create tables if they don't exist (fallback for new deployments)
-            db.create_all()
-            app.logger.info("Database tables verified/created successfully")
+            if not ensure_database_ready():
+                app.logger.error("WARNING: Database initialization failed. App may not function correctly.")
         except Exception as e:
-            app.logger.warning(f"Could not auto-create tables: {e}")
+            app.logger.error(f"Error during database initialization: {e}")
 
     # -------------------
     # LOGGING CONFIGURATION
