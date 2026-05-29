@@ -3,15 +3,17 @@ from app import db, create_app
 from app.models import User
 
 def setup_admin():
-    # Force the app to use the Render/Neon DATABASE_URL
     app = create_app()
-    
+
     with app.app_context():
         try:
-            print("Connecting to Neon...")
-            db.create_all()
-            
+            print("Checking database connection...")
+
+            # ❌ DO NOT create tables here anymore
+            # db.create_all()  ← REMOVE THIS
+
             admin = User.query.filter_by(username='admin').first()
+
             if not admin:
                 print("Creating admin...")
                 new_admin = User(username='admin', role='admin', is_active=True)
@@ -21,9 +23,9 @@ def setup_admin():
                 print("Admin created successfully!")
             else:
                 print("Admin already exists.")
+
         except Exception as e:
             print(f"DATABASE ERROR: {e}")
-            # This ensures the build doesn't just hang
             import sys
             sys.exit(1)
 
