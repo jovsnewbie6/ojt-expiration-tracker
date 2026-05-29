@@ -3,7 +3,7 @@ services:
     name: ojt-expiration-tracker
     env: python
     plan: free
-    branch: whigan
+    branch: Hestia
     runtime: python-3.12
 
     buildCommand: pip install -r requirements.txt
