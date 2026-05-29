@@ -9,6 +9,9 @@ from flask_migrate import Migrate
 
 from config import Config
 
+# -------------------
+# EXTENSIONS (GLOBAL)
+# -------------------
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
@@ -21,6 +24,9 @@ def create_app(config_class=Config):
         static_folder=os.path.join(Path(__file__).resolve().parent, "static"),
     )
 
+    # -------------------
+    # CONFIG
+    # -------------------
     app.config.from_object(config_class)
 
     # -------------------
@@ -44,15 +50,18 @@ def create_app(config_class=Config):
             return None
 
         try:
+            # admin_1 or student_1 format
             if isinstance(user_id, str) and user_id.startswith("admin_"):
                 return User.query.get(int(user_id.split("_")[1]))
 
             if isinstance(user_id, str) and user_id.startswith("student_"):
                 return Student.query.get(int(user_id.split("_")[1]))
 
+            # fallback (Flask-Login default)
             user = User.query.get(user_id)
             if user:
                 return user
+
             return Student.query.get(user_id)
 
         except Exception as e:
@@ -60,37 +69,34 @@ def create_app(config_class=Config):
             return None
 
     # -------------------
-    # IMPORT MODELS
+    # IMPORT MODELS (IMPORTANT FOR MIGRATIONS)
     # -------------------
     from app import models  # noqa: F401
 
     # -------------------
-    # REGISTER ROUTES
+    # BLUEPRINTS
     # -------------------
     from app.routes import main_bp
     app.register_blueprint(main_bp)
 
-    # -------------------
-    # ❌ REMOVED: ensure_database_ready()
-    # -------------------
-    # DO NOT use db.create_all() in production
-    # DO NOT auto-init schema at runtime
+    # ❌ IMPORTANT: NO db.create_all()
+    # ❌ IMPORTANT: NO ensure_database_ready()
+    # Migration ONLY handles schema
 
     # -------------------
     # LOGGING
     # -------------------
-    log_level = logging.INFO if app.debug else logging.WARNING
+    log_level = logging.INFO if app.debug else logging.INFO
 
-    app.logger.handlers.clear()
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(
-        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+        "[%(asctime)s] %(levelname)s in %(module)s: %(message)s"
     ))
-    handler.setLevel(log_level)
 
+    app.logger.handlers.clear()
     app.logger.addHandler(handler)
     app.logger.setLevel(log_level)
 
-    app.logger.info("Application started")
+    app.logger.info("Application started successfully")
 
     return app

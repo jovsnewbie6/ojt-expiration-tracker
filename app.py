@@ -16,8 +16,3 @@ print("Tables in metadata:", db.metadata.tables.keys())
 # Register blueprints
 from app.routes import main_bp
 app.register_blueprint(main_bp)
-
-# Create database tables
-with app.app_context():
-    db.create_all()
-    print("Database tables created successfully.")
