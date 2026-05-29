@@ -8,10 +8,6 @@ services:
 
     buildCommand: pip install -r requirements.txt
 
-    # Run migrations first, then ensure admin exists
-    preDeployCommand: flask db upgrade && python setup_admin.py
-
-    # Start the Flask app
     startCommand: gunicorn wsgi:app
 
     autoDeploy: true
