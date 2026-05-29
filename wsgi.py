@@ -1,10 +1,13 @@
 import os
 from app import create_app
 
+# Create Flask application
 app = create_app()
 
-def _is_debug_mode():
-    return os.getenv("FLASK_DEBUG", "0") in {"1", "true", "True"}
+# This file is used by Gunicorn in production: gunicorn wsgi:app
+# For local development, use: python -m flask run
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=_is_debug_mode())
+    # Local development only
+    debug = os.getenv("FLASK_ENV") != "production"
+    app.run(host="0.0.0.0", port=5000, debug=debug)

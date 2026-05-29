@@ -48,29 +48,25 @@ REQUIREMENT_FIELDS = [
 
 @main_bp.before_request
 def ensure_database_connection():
-    """Ensure database connection is alive before processing request."""
+    """Ensure database connection is alive before processing request (production-optimized)."""
     from sqlalchemy.exc import OperationalError
     from sqlalchemy import text
 
     try:
-        # Test the connection with a simple ping
-        db.session.execute(text("SELECT 1"))
+        # Only test connection on critical operations to reduce overhead
+        if request.method == "POST" or request.endpoint in ["main.admin_dashboard", "main.manage_students"]:
+            db.session.execute(text("SELECT 1"))
 
     except OperationalError:
-        logger.warning("Database connection lost, disposing pool and retrying...")
-
-        # Dispose of the engine to force a new connection
+        logger.warning("Database connection lost, attempting to recover...")
         db.engine.dispose()
 
         try:
             db.session.execute(text("SELECT 1"))
-            logger.info("Database connection re-established successfully")
+            logger.info("Database connection recovered")
 
         except Exception as e:
-            logger.error(f"Could not re-establish database connection: {str(e)}", exc_info=True)
-
-    except Exception as e:
-        logger.warning(f"Non-critical error in before_request: {str(e)}", exc_info=True)
+            logger.error("Could not recover database connection", exc_info=True)
 
 
 @main_bp.route("/health", methods=["GET"])
@@ -292,9 +288,8 @@ def student_register():
         from app.decorators import check_database_connection
         db_connected, db_error = check_database_connection()
         if not db_connected:
-            logger.error(f"Database connection failed during registration: {db_error}")
-            error_detail = (db_error[:50] if db_error else "Unknown error")
-            flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+            logger.error("Database connection failed during registration")
+            flash("Database connection error. Please try again.", "error")
             return render_template("register.html")
 
         student_number = request.form.get("student_number", "").strip()
@@ -308,16 +303,12 @@ def student_register():
 
         # Check if student already exists
         try:
-            logger.info(f"Checking for existing student with number: {student_number}")
             existing_student = Student.query.filter_by(student_number=student_number).first()
-            logger.info(f"Query result for existing student: {existing_student}")
             if existing_student:
-                logger.info(f"Registration attempt with existing student number: {student_number}")
                 flash("That student number is already registered.", "error")
                 return render_template("register.html")
         except Exception as e:
-            logger.error(f"Database error checking for existing student: {str(e)}", exc_info=True)
-            logger.error(f"Exception type: {type(e).__name__}, Error details: {str(e)}")
+            logger.error("Database error during registration duplicate check")
             # Try to identify the specific issue
             error_str = str(e).lower()
             if "connection" in error_str or "timeout" in error_str:
@@ -330,29 +321,23 @@ def student_register():
 
         # Create and save new student
         try:
-            logger.info(f"Creating student object for: {student_number}")
             student = Student(
                 student_number=student_number,
                 name=full_name,
                 year_section=year_section,
                 email=None,
             )
-            logger.info(f"Setting password for student: {student_number}")
             student.set_password(password)
-            logger.info(f"Adding student to session: {student_number}")
             db.session.add(student)
-            logger.info(f"Flushing student {student_number} to detect constraint violations...")
             db.session.flush()  # Flush to detect constraint violations early
-            logger.info(f"Committing student {student_number} to database...")
             db.session.commit()
             
-            logger.info(f"Student registration successful for: {student_number}")
+            logger.info("Student registration successful")
             flash("Registration successful. Please log in.", "success")
             return redirect(url_for("main.student_login"))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error during student registration for {student_number}", exc_info=True)
-            logger.error(f"Exception type: {type(e).__name__}, Details: {str(e)}")
+            logger.error("Error during student registration", exc_info=True)
             
             # Provide more specific error messages
             error_msg = str(e).lower()
@@ -433,23 +418,22 @@ def student_login():
             if student and student.check_password(password):
                 # Check if account is active
                 if not student.is_active:
-                    logger.warning(f"Login attempt for deactivated account: {student_number}")
-                    flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+                    logger.warning("Login attempt for deactivated student account")
+                    flash("This account has been deactivated. Please contact support.", "error")
                     return render_template("student_login.html")
                 
                 login_user(student)
-                logger.info(f"Student login successful: {student_number}")
+                logger.info("Student login successful")
                 flash("Student login successful.", "success")
                 if student.role != "student":
                     return redirect(url_for("main.admin_dashboard"))
                 return redirect(url_for("main.student_portal"))
             else:
-                logger.warning(f"Failed student login attempt for student number: {student_number}")
+                logger.warning("Failed student login attempt")
                 flash("Invalid student credentials.", "error")
         except Exception as e:
-            logger.exception(f"Student login error: {str(e)}")
-            current_app.logger.error(f"Student login error: {str(e)}", exc_info=True)
-            flash("An error occurred during login. Please try again or contact support.", "error")
+            logger.error("Error during student login", exc_info=True)
+            flash("An error occurred during login. Please try again.", "error")
 
     return render_template("student_login.html")
 
@@ -511,9 +495,8 @@ def student_forgot_password():
         from app.decorators import check_database_connection
         db_connected, db_error = check_database_connection()
         if not db_connected:
-            logger.error(f"Database connection failed during password reset: {db_error}")
-            error_detail = (db_error[:50] if db_error else "Unknown error")
-            flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+            logger.error("Database connection failed during password reset")
+            flash("Database connection error. Please try again.", "error")
             return render_template("student_forgot_password.html")
 
         student_number = request.form.get("student_number", "").strip()
@@ -534,46 +517,39 @@ def student_forgot_password():
 
         # Find student
         try:
-            logger.info(f"Looking up student with number: {student_number}")
             student = Student.query.filter_by(student_number=student_number).first()
-            logger.info(f"Student lookup result: {student}")
             if not student:
-                logger.warning(f"Password reset attempt for non-existent student: {student_number}")
+                logger.warning("Password reset attempt for non-existent student")
                 flash("Student number not found.", "error")
                 return render_template("student_forgot_password.html")
         except Exception as e:
-            logger.error(f"Database error finding student {student_number}: {str(e)}", exc_info=True)
-            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error("Database error during password reset lookup", exc_info=True)
             error_str = str(e).lower()
             if "connection" in error_str or "timeout" in error_str or "pool" in error_str:
                 flash("Database connection error. Please try again.", "error")
             elif "table" in error_str or "does not exist" in error_str:
                 flash("System error: database not initialized. Contact support.", "error")
             else:
-                flash("Database error. Please try again or contact support.", "error")
+                flash("Database error. Please try again.", "error")
             return render_template("student_forgot_password.html")
 
         # Update password
         try:
-            logger.info(f"Updating password for student: {student_number}")
             student.set_password(new_password)
             db.session.flush()  # Flush to detect issues early
-            logger.info(f"Password updated in session for student: {student_number}, committing...")
             db.session.commit()
-            logger.info(f"Commit successful for student: {student_number}")
             
-            logger.info(f"Password reset successful for student: {student_number}")
+            logger.info("Password reset successful")
             flash("Your password has been reset successfully. Please log in.", "success")
             return redirect(url_for("main.student_login"))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating password for student {student_number}", exc_info=True)
-            logger.error(f"Exception type: {type(e).__name__}, Details: {str(e)}")
+            logger.error("Error updating password", exc_info=True)
             error_str = str(e).lower()
             if "connection" in error_str or "timeout" in error_str:
                 flash("Database connection error. Please try again.", "error")
             else:
-                flash("An error occurred while resetting your password. Please try again or contact support.", "error")
+                flash("An error occurred while resetting your password. Please try again.", "error")
             return render_template("student_forgot_password.html")
 
     return render_template("student_forgot_password.html")
@@ -589,9 +565,8 @@ def admin_login():
         from app.decorators import check_database_connection
         db_connected, db_error = check_database_connection()
         if not db_connected:
-            logger.error(f"Database connection failed during admin login: {db_error}")
-            error_detail = (db_error[:50] if db_error else "Unknown error")
-            flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
+            logger.error("Database connection failed during admin login")
+            flash("Database connection error. Please try again.", "error")
             return render_template("admin_login.html", is_admin=current_user.is_authenticated)
         
         username = request.form.get("username", "").strip()
@@ -603,34 +578,31 @@ def admin_login():
         
         # Query for admin user
         try:
-            logger.info(f"Looking up admin user: {username}")
             admin = User.query.filter_by(username=username, role="admin").first()
-            logger.info(f"Admin user lookup result: {admin}")
 
             if admin and admin.check_password(password):
                 # Check if account is active
                 if not admin.is_active:
-                    logger.warning(f"Login attempt for deactivated admin account: {username}")
-                    flash("This account has been deactivated. Please contact the Internal Audit Office.", "error")
+                    logger.warning("Login attempt for deactivated admin account")
+                    flash("This account has been deactivated. Please contact support.", "error")
                     return render_template("admin_login.html", is_admin=current_user.is_authenticated)
                 
                 login_user(admin)
-                logger.info(f"Admin login successful: {username}")
+                logger.info("Admin login successful")
                 flash("Admin signed in successfully.", "success")
                 return redirect(url_for("main.admin_dashboard"))
             else:
-                logger.warning(f"Failed admin login attempt for username: {username}")
+                logger.warning("Failed admin login attempt")
                 flash("Invalid admin credentials.", "error")
         except Exception as e:
-            logger.error(f"Database error during admin login for {username}", exc_info=True)
-            logger.error(f"Exception type: {type(e).__name__}, Details: {str(e)}")
+            logger.error("Database error during admin login", exc_info=True)
             error_str = str(e).lower()
             if "connection" in error_str or "timeout" in error_str or "pool" in error_str:
                 flash("Database connection error. Please try again.", "error")
             elif "table" in error_str or "does not exist" in error_str:
                 flash("System error: database not initialized. Contact support.", "error")
             else:
-                flash("An error occurred during login. Please try again or contact support.", "error")
+                flash("An error occurred during login. Please try again.", "error")
 
     return render_template(
         "admin_login.html",

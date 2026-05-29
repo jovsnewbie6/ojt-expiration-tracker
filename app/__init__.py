@@ -83,11 +83,21 @@ def create_app(config_class=Config):
             app.logger.warning(f"Could not auto-create tables: {e}")
 
     # -------------------
-    # LOGGING
+    # LOGGING CONFIGURATION
     # -------------------
-    if not app.debug:
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.INFO)
-        app.logger.addHandler(handler)
+    # Set logging level based on environment
+    log_level = logging.INFO if app.debug else logging.WARNING
+    
+    # Remove default handler and add custom one
+    app.logger.handlers.clear()
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+    ))
+    handler.setLevel(log_level)
+    app.logger.addHandler(handler)
+    app.logger.setLevel(log_level)
+    
+    app.logger.info(f"Application started in {app.config.get('ENV', 'development')} mode")
 
     return app
