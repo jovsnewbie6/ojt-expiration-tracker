@@ -11,7 +11,7 @@ from config import Config
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-migrate = Migrate()   # ✅ ADD THIS
+migrate = Migrate()
 
 
 def create_app(config_class=Config):
@@ -28,7 +28,7 @@ def create_app(config_class=Config):
     # -------------------
     db.init_app(app)
     login_manager.init_app(app)
-    migrate.init_app(app, db)   # ✅ REQUIRED FOR FLASK-MIGRATE
+    migrate.init_app(app, db)
 
     login_manager.login_view = "main.login_choice"
     login_manager.login_message = "Please log in to continue."
@@ -50,7 +50,6 @@ def create_app(config_class=Config):
             if isinstance(user_id, str) and user_id.startswith("student_"):
                 return Student.query.get(int(user_id.split("_")[1]))
 
-            # fallback
             user = User.query.get(user_id)
             if user:
                 return user
@@ -61,7 +60,7 @@ def create_app(config_class=Config):
             return None
 
     # -------------------
-    # IMPORT MODELS (IMPORTANT)
+    # IMPORT MODELS
     # -------------------
     from app import models  # noqa: F401
 
@@ -72,32 +71,26 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
 
     # -------------------
-    # ENSURE DATABASE TABLES EXIST
+    # ❌ REMOVED: ensure_database_ready()
     # -------------------
-    with app.app_context():
-        from app.database_init import ensure_database_ready
-        try:
-            if not ensure_database_ready():
-                app.logger.error("WARNING: Database initialization failed. App may not function correctly.")
-        except Exception as e:
-            app.logger.error(f"Error during database initialization: {e}")
+    # DO NOT use db.create_all() in production
+    # DO NOT auto-init schema at runtime
 
     # -------------------
-    # LOGGING CONFIGURATION
+    # LOGGING
     # -------------------
-    # Set logging level based on environment
     log_level = logging.INFO if app.debug else logging.WARNING
-    
-    # Remove default handler and add custom one
+
     app.logger.handlers.clear()
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
     ))
     handler.setLevel(log_level)
+
     app.logger.addHandler(handler)
     app.logger.setLevel(log_level)
-    
-    app.logger.info(f"Application started in {app.config.get('ENV', 'development')} mode")
+
+    app.logger.info("Application started")
 
     return app
