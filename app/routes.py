@@ -284,42 +284,49 @@ def student_register():
         return redirect(url_for("main.student_portal"))
 
     if request.method == "POST":
-        # CRITICAL: Ensure database is ready BEFORE any operations
+        # Ensure database is ready
         from app.database_init import ensure_database_ready
         if not ensure_database_ready():
-            logger.error("Database not ready during registration - cannot proceed")
-            flash("System error: Database not ready. Please try again in a moment.", "error")
+            logger.error("Database not ready during registration")
+            flash("System error: Database not ready. Please try again.", "error")
             return render_template("register.html")
 
-        # Get form data
+        # Get required fields
         student_number = request.form.get("student_number", "").strip()
         full_name = request.form.get("full_name", "").strip()
-        year_section = request.form.get("year_section", "").strip()
         password = request.form.get("password", "").strip()
+        year_section = request.form.get("year_section", "").strip()  # Optional
 
-        # Validate input
-        if not student_number or not full_name or not year_section or not password:
-            flash("Please complete all registration fields.", "error")
+        # Validate required fields
+        if not student_number:
+            flash("Student number is required.", "error")
+            return render_template("register.html")
+        
+        if not full_name:
+            flash("Full name is required.", "error")
+            return render_template("register.html")
+        
+        if not password:
+            flash("Password is required.", "error")
             return render_template("register.html")
 
-        if len(password) < 6:
-            flash("Password must be at least 6 characters long.", "error")
-            return render_template("register.html")
+        # If year_section not provided, use empty string
+        if not year_section:
+            year_section = ""
 
-        # Check if student already exists and create new student
         try:
-            # First check for duplicate
+            # Check if student number already exists
             existing_student = Student.query.filter_by(student_number=student_number).first()
             if existing_student:
-                logger.warning(f"Registration attempt with existing student number: {student_number}")
-                flash("That student number is already registered.", "error")
+                logger.warning(f"Duplicate registration attempt: {student_number}")
+                flash("This student number is already registered. Please log in instead.", "error")
                 return render_template("register.html")
 
-            # Create new student
+            # Create new student account
             student = Student(
                 student_number=student_number,
                 name=full_name,
-                year_section=year_section,
+                year_section=year_section or "",
                 email=None,
                 is_active=True,
             )
@@ -327,31 +334,24 @@ def student_register():
             
             # Save to database
             db.session.add(student)
-            db.session.flush()  # Flush to detect constraint violations early
+            db.session.flush()
             db.session.commit()
             
-            logger.info(f"Student registration successful: {student_number} (ID: {student.id})")
-            flash("✓ Registration successful! Please log in with your student number and password.", "success")
+            logger.info(f"Student registration successful: {student_number}")
+            flash("✓ Account created! Log in with your student number and password.", "success")
             return redirect(url_for("main.student_login"))
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error during student registration: {str(e)}", exc_info=True)
+            logger.error(f"Registration error: {str(e)}", exc_info=True)
             
-            # Provide user-friendly error messages
-            error_msg = str(e).lower()
-            if "unique" in error_msg or "duplicate" in error_msg:
-                logger.warning(f"Duplicate student number attempt: {student_number}")
+            error_str = str(e).lower()
+            if "unique" in error_str or "duplicate" in error_str:
                 flash("This student number is already registered.", "error")
-            elif "constraint" in error_msg:
-                logger.warning(f"Constraint violation during registration: {student_number}")
-                flash("Invalid data provided. Please check your inputs.", "error")
-            elif "connection" in error_msg or "timeout" in error_msg or "pool" in error_msg:
-                logger.error("Database connection error during registration")
-                flash("Database connection error. Please try again in a moment.", "error")
+            elif "connection" in error_str or "pool" in error_str or "timeout" in error_str:
+                flash("Database error. Please try again.", "error")
             else:
-                logger.error(f"Unknown error during registration: {error_msg}")
-                flash("An error occurred during registration. Please try again.", "error")
+                flash("Registration failed. Please try again.", "error")
             
             return render_template("register.html")
 
@@ -412,10 +412,10 @@ def student_login():
     if request.method == "POST":
         from app.database_init import ensure_database_ready
         
-        # Ensure database is ready before attempting login
+        # Ensure database is ready
         if not ensure_database_ready():
-            logger.error("Database not ready during student login")
-            flash("System error: Database not ready. Please try again in a moment.", "error")
+            logger.error("Database not ready during login")
+            flash("System error. Please try again.", "error")
             return render_template("student_login.html")
         
         try:
@@ -423,46 +423,30 @@ def student_login():
             password = request.form.get("password", "").strip()
             
             if not student_number or not password:
-                flash("Please provide both student number and password.", "error")
+                flash("Please enter your student number and password.", "error")
                 return render_template("student_login.html")
             
-            # Query student
+            # Find student by number
             student = Student.query.filter_by(student_number=student_number).first()
 
-            # Check credentials
+            # Verify credentials
             if student and student.check_password(password):
-                # Check if account is active
                 if not student.is_active:
-                    logger.warning(f"Login attempt for deactivated student: {student_number}")
-                    flash("This account has been deactivated. Please contact support.", "error")
+                    logger.warning(f"Deactivated student login: {student_number}")
+                    flash("Account disabled. Contact support.", "error")
                     return render_template("student_login.html")
                 
                 # Login successful
                 login_user(student)
-                logger.info(f"Student login successful: {student_number}")
-                flash(f"Welcome {student.name}! Login successful.", "success")
+                logger.info(f"Student login: {student_number}")
                 return redirect(url_for("main.student_portal"))
             else:
-                # Invalid credentials or student not found
-                logger.warning(f"Failed login attempt for student: {student_number}")
                 flash("Invalid student number or password.", "error")
                 return render_template("student_login.html")
                 
         except Exception as e:
-            logger.error(f"Error during student login: {str(e)}", exc_info=True)
-            
-            # Provide specific error messages based on exception type
-            error_msg = str(e).lower()
-            if "connection" in error_msg or "timeout" in error_msg or "pool" in error_msg:
-                logger.error("Database connection error during login")
-                flash("Database connection error. Please try again in a moment.", "error")
-            elif "table" in error_msg or "does not exist" in error_msg:
-                logger.error("Tables not found during login")
-                flash("System error: Database initialization needed. Please try again.", "error")
-            else:
-                logger.error(f"Unknown error during login: {error_msg}")
-                flash("An error occurred during login. Please try again.", "error")
-            
+            logger.error(f"Login error: {str(e)}", exc_info=True)
+            flash("Error during login. Please try again.", "error")
             return render_template("student_login.html")
 
     return render_template("student_login.html")

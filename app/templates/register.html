@@ -58,30 +58,30 @@
                 <section class="panel">
                     <div class="panel-header">
                         <h2>Student Registration</h2>
-                        <p>Register using your student number, full name, year/section, and password.</p>
+                        <p>Register with your student number and password to access your student portal.</p>
                     </div>
                     <form method="post" class="tracker-form">
                         <div class="form-grid">
                             <label>
-                                <span>Student Number</span>
-                                <input type="text" name="student_number" placeholder="Enter your student number" required />
+                                <span>Student Number <span class="required">*</span></span>
+                                <input type="text" name="student_number" placeholder="Your student number (e.g., 2021-12345)" required />
                             </label>
                             <label>
-                                <span>Full Name</span>
-                                <input type="text" name="full_name" placeholder="Enter your full name" required />
+                                <span>Full Name <span class="required">*</span></span>
+                                <input type="text" name="full_name" placeholder="Your full name" required />
                             </label>
                             <label>
-                                <span>Year / Section</span>
-                                <input type="text" name="year_section" placeholder="e.g. 3-3" required />
+                                <span>Password <span class="required">*</span></span>
+                                <input type="password" name="password" placeholder="Create a simple password" required />
                             </label>
                             <label>
-                                <span>Password</span>
-                                <input type="password" name="password" placeholder="Create a password" required />
+                                <span>Year / Section <span class="optional">(optional)</span></span>
+                                <input type="text" name="year_section" placeholder="e.g. 3-3 (can be updated later)" />
                             </label>
                         </div>
                         <div class="form-actions">
-                            <button type="submit">Register</button>
-                            <a class="secondary-button" href="{{ url_for('main.student_login') }}">Already registered?</a>
+                            <button type="submit">Create Account</button>
+                            <a class="secondary-button" href="{{ url_for('main.student_login') }}">Already have an account?</a>
                         </div>
                     </form>
                 </section>
