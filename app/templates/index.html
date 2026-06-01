@@ -207,8 +207,8 @@
                                 <div class="requirement-tracker">
                                     <ul>
                                         {% for field, label in requirement_fields %}
-                                            <li class="{{ 'complete' if getattr(record, field) else 'missing' }}">
-                                                {{ label }}: {{ 'Yes' if getattr(record, field) else 'No' }}
+                                            <li class="{{ 'complete' if getattr_fn(record, field) else 'missing' }}">
+                                                {{ label }}: {{ 'Yes' if getattr_fn(record, field) else 'No' }}
                                             </li>
                                         {% endfor %}
                                     </ul>

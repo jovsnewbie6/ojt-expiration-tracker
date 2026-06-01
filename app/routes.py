@@ -279,6 +279,7 @@ def student_portal():
         form_action=url_for("main.student_portal"),
         student_filters={},
         is_admin=False,
+        getattr_fn=getattr,
     )
 
 
