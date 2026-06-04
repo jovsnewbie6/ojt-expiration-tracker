@@ -1364,42 +1364,16 @@ def admin_attendance_export():
 @main_bp.route("/check-attendance")
 def check_attendance():
     try:
-        from sqlalchemy import text
+        from app.models import Attendance
 
-        # Show database type
-        db_url = str(db.engine.url)
+        # safer check using SQLAlchemy inspection
+        inspector = db.inspect(db.engine)
+        tables = inspector.get_table_names()
 
-        # SQLite check
-        if "sqlite" in db_url.lower():
-            tables = db.session.execute(
-                text("SELECT name FROM sqlite_master WHERE type='table'")
-            ).fetchall()
-
-            table_names = [t[0] for t in tables]
-
-            return f"""
-            Database: SQLITE<br>
-            Tables:<br>
-            {'<br>'.join(table_names)}
-            """
-
-        # PostgreSQL check
+        if "attendance" in tables:
+            return "Attendance table EXISTS"
         else:
-            tables = db.session.execute(
-                text("""
-                    SELECT table_name
-                    FROM information_schema.tables
-                    WHERE table_schema='public'
-                """)
-            ).fetchall()
-
-            table_names = [t[0] for t in tables]
-
-            return f"""
-            Database: POSTGRESQL<br>
-            Tables:<br>
-            {'<br>'.join(table_names)}
-            """
+            return "Attendance table DOES NOT EXIST"
 
     except Exception as e:
-        return f"ERROR:<br>{str(e)}"
+        return f"ERROR: {str(e)}"
