@@ -1366,20 +1366,40 @@ def check_attendance():
     try:
         from sqlalchemy import text
 
-        result = db.session.execute(
-            text("""
-                SELECT table_name
-                FROM information_schema.tables
-                WHERE table_name='attendance'
-            """)
-        )
+        # Show database type
+        db_url = str(db.engine.url)
 
-        table_exists = result.fetchone()
+        # SQLite check
+        if "sqlite" in db_url.lower():
+            tables = db.session.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            ).fetchall()
 
-        if table_exists:
-            return "Attendance table EXISTS"
+            table_names = [t[0] for t in tables]
+
+            return f"""
+            Database: SQLITE<br>
+            Tables:<br>
+            {'<br>'.join(table_names)}
+            """
+
+        # PostgreSQL check
         else:
-            return "Attendance table DOES NOT EXIST"
+            tables = db.session.execute(
+                text("""
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema='public'
+                """)
+            ).fetchall()
+
+            table_names = [t[0] for t in tables]
+
+            return f"""
+            Database: POSTGRESQL<br>
+            Tables:<br>
+            {'<br>'.join(table_names)}
+            """
 
     except Exception as e:
-        return f"ERROR: {str(e)}"
+        return f"ERROR:<br>{str(e)}"
