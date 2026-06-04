@@ -1148,3 +1148,187 @@ def delete_admin(id):
     db.session.commit()
     flash('Admin account removed.', 'success')
     return redirect(url_for('main.admin_dashboard'))
+
+
+# ==================== ATTENDANCE SECTION ====================
+
+@main_bp.route("/student/attendance", methods=["GET", "POST"])
+@login_required
+def student_attendance():
+    """Student attendance submission page"""
+    # Only allow students
+    if not isinstance(current_user, Student):
+        flash("Only students can access this page.", "error")
+        return redirect(url_for("main.admin_dashboard"))
+    
+    if request.method == "POST":
+        try:
+            from app.models import Attendance
+            from datetime import datetime
+            
+            # Get form data
+            attendance_date = request.form.get("attendance_date", "").strip()
+            attendance_time = request.form.get("attendance_time", "").strip()
+            status = request.form.get("status", "Present").strip()
+            
+            # Validate
+            if not attendance_date or not attendance_time:
+                flash("Please fill in date and time.", "error")
+                return render_template("student_attendance.html")
+            
+            if status not in ["Present", "Absent"]:
+                status = "Present"
+            
+            # Create attendance record
+            attendance = Attendance(
+                student_id=current_user.id,
+                student_name=current_user.name,
+                student_section=current_user.year_section or "N/A",
+                attendance_date=datetime.strptime(attendance_date, "%Y-%m-%d").date(),
+                attendance_time=attendance_time,
+                status=status
+            )
+            
+            db.session.add(attendance)
+            db.session.commit()
+            
+            flash("✓ Attendance submitted successfully.", "success")
+            return redirect(url_for("main.student_attendance"))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Attendance submission error: {str(e)}", exc_info=True)
+            flash("Error submitting attendance. Please try again.", "error")
+            return render_template("student_attendance.html")
+    
+    return render_template("student_attendance.html", student=current_user)
+
+
+@main_bp.route("/student/attendance/export")
+@login_required
+def student_attendance_export():
+    """Export student attendance records to Excel"""
+    if not isinstance(current_user, Student):
+        flash("Only students can export attendance.", "error")
+        return redirect(url_for("main.admin_dashboard"))
+    
+    try:
+        from app.models import Attendance
+        import pandas as pd
+        
+        # Get all attendance records for this student
+        records = Attendance.query.filter_by(student_id=current_user.id).order_by(Attendance.attendance_date.desc()).all()
+        
+        if not records:
+            flash("No attendance records to export.", "error")
+            return redirect(url_for("main.student_attendance"))
+        
+        # Prepare data
+        data = []
+        for record in records:
+            data.append({
+                "Student Name": record.student_name,
+                "Date": record.attendance_date.strftime("%Y-%m-%d"),
+                "Time": record.attendance_time,
+                "Status": record.status,
+            })
+        
+        # Create Excel
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Attendance")
+        
+        output.seek(0)
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name="my_attendance.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        
+    except Exception as e:
+        logger.error(f"Attendance export error: {str(e)}", exc_info=True)
+        flash("Error exporting attendance. Please try again.", "error")
+        return redirect(url_for("main.student_attendance"))
+
+
+@main_bp.route("/admin/attendance")
+@login_required
+@admin_required
+def admin_attendance():
+    """Admin attendance view with year filter"""
+    from app.models import Attendance
+    
+    # Get selected year from query params
+    selected_year = request.args.get("year", "").strip()
+    
+    # Get all unique years from attendance records
+    all_records = Attendance.query.all()
+    years = sorted(set([str(r.attendance_date.year) for r in all_records]), reverse=True)
+    
+    # Filter by year if selected
+    if selected_year:
+        records = Attendance.query.filter(
+            db.func.strftime('%Y', Attendance.attendance_date) == selected_year
+        ).order_by(Attendance.attendance_date.desc(), Attendance.attendance_time.desc()).all()
+    else:
+        records = Attendance.query.order_by(Attendance.attendance_date.desc(), Attendance.attendance_time.desc()).all()
+    
+    return render_template("admin_attendance.html", records=records, years=years, selected_year=selected_year)
+
+
+@main_bp.route("/admin/attendance/export")
+@login_required
+@admin_required
+def admin_attendance_export():
+    """Export all attendance records to Excel"""
+    from app.models import Attendance
+    
+    try:
+        import pandas as pd
+        
+        # Get filter year if any
+        selected_year = request.args.get("year", "").strip()
+        
+        if selected_year:
+            records = Attendance.query.filter(
+                db.func.strftime('%Y', Attendance.attendance_date) == selected_year
+            ).order_by(Attendance.attendance_date.desc()).all()
+        else:
+            records = Attendance.query.order_by(Attendance.attendance_date.desc()).all()
+        
+        if not records:
+            flash("No attendance records to export.", "error")
+            return redirect(url_for("main.admin_attendance"))
+        
+        # Prepare data
+        data = []
+        for record in records:
+            data.append({
+                "Student Name": record.student_name,
+                "Date": record.attendance_date.strftime("%Y-%m-%d"),
+                "Time": record.attendance_time,
+                "Status": record.status,
+                "Section": record.student_section,
+            })
+        
+        # Create Excel
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Attendance")
+        
+        output.seek(0)
+        year_label = f"_{selected_year}" if selected_year else ""
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name=f"attendance_records{year_label}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        
+    except Exception as e:
+        logger.error(f"Attendance export error: {str(e)}", exc_info=True)
+        flash("Error exporting attendance. Please try again.", "error")
+        return redirect(url_for("main.admin_attendance"))

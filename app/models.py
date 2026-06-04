@@ -207,3 +207,19 @@ class Student(UserMixin, db.Model):
         if not permission_name:
             return False
         return any(permission.name == permission_name for permission in self.permissions)
+
+
+class Attendance(db.Model):
+    __tablename__ = "attendance"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    student_name = db.Column(db.String(140), nullable=False)
+    student_section = db.Column(db.String(60), nullable=False, default="")
+    attendance_date = db.Column(db.Date, nullable=False)
+    attendance_time = db.Column(db.String(5), nullable=False)  # HH:MM format
+    status = db.Column(db.String(20), nullable=False, default="Present")  # Present, Absent
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Attendance {self.student_name} - {self.attendance_date} - {self.status}>"

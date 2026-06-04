@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance | Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <style>
+        .attendance-controls {
+            display: grid;
+            grid-template-columns: 1fr 200px 150px;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: end;
+        }
+        @media (max-width: 800px) {
+            .attendance-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+        .year-filter {
+            display: grid;
+            gap: 8px;
+        }
+        .year-filter label {
+            font-weight: 700;
+            color: #4f1d2b;
+            font-size: 0.9rem;
+        }
+        .year-filter select {
+            padding: 10px 12px;
+            border: 1px solid rgba(124, 19, 38, 0.2);
+            border-radius: 8px;
+            background: white;
+            color: #4f1d2b;
+        }
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .attendance-table thead {
+            background: #3d1222;
+            color: #f5e7d8;
+        }
+        .attendance-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #f0c10a;
+        }
+        .attendance-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            color: #2c1b26;
+        }
+        .attendance-table tbody tr:hover {
+            background: #f9f7f5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .status-present {
+            background: #d4f1d4;
+            color: #1a6b1a;
+        }
+        .status-absent {
+            background: #f1d4d4;
+            color: #6b1a1a;
+        }
+        .btn-export {
+            background: #f0c10a;
+            color: #2c1b26;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-export:hover {
+            background: #e0b000;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="site-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
+                </div>
+                <div>
+                    <h2>Admin Dashboard</h2>
+                    <p>Manage MOA & Attendance</p>
+                </div>
+            </div>
+            <nav class="vertical-nav">
+                <a href="{{ url_for('main.admin_dashboard') }}">MOA Records</a>
+                <a href="{{ url_for('main.admin_attendance') }}" class="active">Attendance</a>
+                <a href="{{ url_for('main.admin_create_staff') }}">Create Staff</a>
+                <a href="{{ url_for('main.admin_logout') }}">Logout</a>
+            </nav>
+        </aside>
+
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <h1>📋 Student Attendance Records</h1>
+                    </div>
+                </div>
+                <p class="site-intro">View and manage student attendance records. Filter by year and export to Excel.</p>
+            </header>
+
+            <main class="main-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="messages">
+                            {% for category, message in messages %}
+                                <div class="message {{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Attendance Records</h2>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="attendance-controls">
+                        <div class="year-filter">
+                            <label>Filter by Year:</label>
+                            <form method="get" style="display: grid; grid-template-columns: 1fr auto; gap: 8px;">
+                                <select name="year" onchange="this.form.submit()">
+                                    <option value="">All Years</option>
+                                    {% for year in years %}
+                                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </div>
+                        
+                        <div></div><!-- Spacer -->
+                        
+                        <a href="{{ url_for('main.admin_attendance_export', year=selected_year) }}" class="btn-export">
+                            📥 Export Excel
+                        </a>
+                    </div>
+
+                    <!-- Records Table -->
+                    {% if records %}
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Section</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                    <tr>
+                                        <td>{{ record.student_name }}</td>
+                                        <td>{{ record.student_section }}</td>
+                                        <td>{{ record.attendance_date.strftime("%Y-%m-%d") }}</td>
+                                        <td>{{ record.attendance_time }}</td>
+                                        <td>
+                                            {% if record.status == "Present" %}
+                                                <span class="status-badge status-present">✓ Present</span>
+                                            {% else %}
+                                                <span class="status-badge status-absent">✗ Absent</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="empty-state">
+                            <p>No attendance records found.</p>
+                            {% if selected_year %}
+                                <p><a href="{{ url_for('main.admin_attendance') }}">View all years</a></p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
