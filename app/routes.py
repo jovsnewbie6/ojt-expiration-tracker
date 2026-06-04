@@ -1270,7 +1270,7 @@ def admin_attendance():
     # Filter by year if selected
     if selected_year:
         records = Attendance.query.filter(
-            db.func.strftime('%Y', Attendance.attendance_date) == selected_year
+            db.extract('year', Attendance.attendance_date) == int(selected_year)
         ).order_by(Attendance.attendance_date.desc(), Attendance.attendance_time.desc()).all()
     else:
         records = Attendance.query.order_by(Attendance.attendance_date.desc(), Attendance.attendance_time.desc()).all()
@@ -1293,7 +1293,7 @@ def admin_attendance_export():
         
         if selected_year:
             records = Attendance.query.filter(
-                db.func.strftime('%Y', Attendance.attendance_date) == selected_year
+                db.extract('year', Attendance.attendance_date) == int(selected_year)
             ).order_by(Attendance.attendance_date.desc()).all()
         else:
             records = Attendance.query.order_by(Attendance.attendance_date.desc()).all()
