@@ -91,7 +91,35 @@ def health_check():
             "status": "unhealthy",
             "error": str(e)
         }, 500
+    
+@main_bp.route("/check-attendance", methods=["GET"])
+def check_attendance():
+    """Debug route to verify Attendance table exists."""
+    try:
+        from sqlalchemy import text
 
+        result = db.session.execute(
+            text("SELECT COUNT(*) FROM attendance")
+        )
+
+        count = result.scalar()
+
+        return {
+            "status": "success",
+            "message": "Attendance table exists",
+            "record_count": count
+        }, 200
+
+    except Exception as e:
+        logger.error(
+            f"Attendance table check failed: {str(e)}",
+            exc_info=True
+        )
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }, 500
 
 def parse_integer(value, default=0):
     try:
@@ -1332,3 +1360,26 @@ def admin_attendance_export():
         logger.error(f"Attendance export error: {str(e)}", exc_info=True)
         flash("Error exporting attendance. Please try again.", "error")
         return redirect(url_for("main.admin_attendance"))
+    
+@main_bp.route("/check-attendance")
+def check_attendance():
+    try:
+        from sqlalchemy import text
+
+        result = db.session.execute(
+            text("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_name='attendance'
+            """)
+        )
+
+        table_exists = result.fetchone()
+
+        if table_exists:
+            return "Attendance table EXISTS"
+        else:
+            return "Attendance table DOES NOT EXIST"
+
+    except Exception as e:
+        return f"ERROR: {str(e)}"
