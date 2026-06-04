@@ -43,7 +43,12 @@ def create_app():
     # Application Context Configuration (Failsafe for Neon Deployment)
     with app.app_context():
         # Force production tables to build dynamically bypassing out-of-sync Alembic logs
-        db.create_all()
+        # Wrapped in try/except to prevent multi-worker race conditions
+        try:
+            db.create_all()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Table creation bypassed (handled by another worker): {e}")
         
         # Verify and stretch password column lengths to prevent hash truncation crashes
         try:
