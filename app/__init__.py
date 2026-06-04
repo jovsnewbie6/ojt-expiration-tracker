@@ -23,7 +23,7 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'main.admin_login'
+    login_manager.login_view = 'main.login'
 
     # Register Blueprints (Adjust names based on your project files)
     from app.routes import main_bp
@@ -54,9 +54,14 @@ def create_app():
         try:
             db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256);"))
             db.session.execute(text("ALTER TABLE students ALTER COLUMN password_hash TYPE VARCHAR(256);"))
+            
+            # ADD THIS LINE to fix the missing username column:
+            db.session.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS username VARCHAR(80);"))
+            
             db.session.commit()
-        except Exception:
+        except Exception as e:
             db.session.rollback()
+            print(f"Table alteration bypassed: {e}")
 
         # Core Permissions Auto-Seeding
         from app.models import Permission
