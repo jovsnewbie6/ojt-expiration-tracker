@@ -50,14 +50,12 @@ def create_app(config_class=Config):
             return None
 
         try:
-            # admin_1 or student_1 format
             if isinstance(user_id, str) and user_id.startswith("admin_"):
                 return User.query.get(int(user_id.split("_")[1]))
 
             if isinstance(user_id, str) and user_id.startswith("student_"):
                 return Student.query.get(int(user_id.split("_")[1]))
 
-            # fallback (Flask-Login default)
             user = User.query.get(user_id)
             if user:
                 return user
@@ -79,23 +77,10 @@ def create_app(config_class=Config):
     from app.routes import main_bp
     app.register_blueprint(main_bp)
 
-    # ❌ IMPORTANT: NO db.create_all()
-    # ❌ IMPORTANT: NO ensure_database_ready()
-@app.before_request
-def ensure_tables_exist():
-    if not hasattr(app, "tables_checked"):
-        try:
-            db.create_all()
-            app.tables_checked = True
-            app.logger.info("Database tables checked/created safely")
-        except Exception as e:
-            app.logger.error(f"DB init error: {e}")
-    # Migration ONLY handles schema
-
     # -------------------
     # LOGGING
     # -------------------
-    log_level = logging.INFO if app.debug else logging.INFO
+    log_level = logging.INFO
 
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(
