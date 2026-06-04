@@ -1360,16 +1360,3 @@ def admin_attendance_export():
         logger.error(f"Attendance export error: {str(e)}", exc_info=True)
         flash("Error exporting attendance. Please try again.", "error")
         return redirect(url_for("main.admin_attendance"))
-    
-@main_bp.route("/check-attendance")
-def check_attendance():
-    try:
-        from app.models import Attendance
-
-        inspector = db.inspect(db.engine)
-        tables = inspector.get_table_names()
-
-        return f"Tables: {tables}"
-
-    except Exception as e:
-        return f"ERROR: {str(e)}"
