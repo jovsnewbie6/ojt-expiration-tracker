@@ -2,7 +2,7 @@ import os
 import logging
 from pathlib import Path
 
-from flask import Flask, app
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -79,16 +79,17 @@ def create_app(config_class=Config):
     from app.routes import main_bp
     app.register_blueprint(main_bp)
 
-    from app import models  # noqa: F401
-    # -------------------
-    # SAFE TABLE RECOVERY (TEMP FIX FOR RENDER MIGRATION ERROR)
-    # -------------------
-    with app.app_context():
+    # ❌ IMPORTANT: NO db.create_all()
+    # ❌ IMPORTANT: NO ensure_database_ready()
+@app.before_request
+def ensure_tables_exist():
+    if not hasattr(app, "tables_checked"):
         try:
             db.create_all()
-            app.logger.info("Database tables ensured via create_all()")
+            app.tables_checked = True
+            app.logger.info("Database tables checked/created safely")
         except Exception as e:
-            app.logger.error(f"DB create_all failed: {e}")
+            app.logger.error(f"DB init error: {e}")
     # Migration ONLY handles schema
 
     # -------------------

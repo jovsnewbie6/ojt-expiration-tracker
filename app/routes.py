@@ -1366,14 +1366,10 @@ def check_attendance():
     try:
         from app.models import Attendance
 
-        # safer check using SQLAlchemy inspection
         inspector = db.inspect(db.engine)
         tables = inspector.get_table_names()
 
-        if "attendance" in tables:
-            return "Attendance table EXISTS"
-        else:
-            return "Attendance table DOES NOT EXIST"
+        return f"Tables: {tables}"
 
     except Exception as e:
         return f"ERROR: {str(e)}"
