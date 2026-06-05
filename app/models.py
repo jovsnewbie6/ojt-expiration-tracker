@@ -25,8 +25,13 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(30), nullable=False, default="faculty")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
-    permissions = db.relationship('Permission', secondary=user_permissions, lazy='subquery',
-                                  backref=db.backref('users', lazy=True))
+    permissions = db.relationship(
+    'Permission', 
+    secondary=user_permissions, 
+    lazy='subquery',
+    backref=db.backref('users', lazy=True),
+    overlaps="permissions,students" # Add this line
+)
     
     @property
     def is_admin(self):
@@ -61,8 +66,13 @@ class Student(UserMixin, db.Model):
     records = db.relationship('StudentRecord', backref='student_owner', lazy=True, cascade="all, delete-orphan")
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
-    permissions = db.relationship('Permission', secondary=user_permissions, lazy='subquery',
-                                  backref=db.backref('students', lazy=True))
+    permissions = db.relationship(
+    'Permission', 
+    secondary=user_permissions, 
+    lazy='subquery',
+    backref=db.backref('students', lazy=True),
+    overlaps="permissions,users" # Add this line
+)
 
     def get_id(self):
         return f"student_{self.id}"
