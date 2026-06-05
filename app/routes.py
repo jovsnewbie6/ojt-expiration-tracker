@@ -606,8 +606,11 @@ def student_forgot_password():
 
 @main_bp.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    if current_user.is_authenticated:
+    # Only redirect if they are already logged in AND active
+    if current_user.is_authenticated and current_user.is_active:
         return redirect(url_for("main.admin_dashboard"))
+    
+    # ... rest of your login logic ...
 
     if request.method == "POST":
         # Check database connection first
@@ -671,7 +674,7 @@ def admin_logout():
 
 @main_bp.route("/admin/dashboard")
 @login_required
-@staff_required
+#@staff_required
 def admin_dashboard():
     search_term = request.args.get("search", "").strip()
     records_query = StudentRecord.query.order_by(StudentRecord.expiration_date)
