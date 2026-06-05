@@ -76,11 +76,25 @@ class StudentRecord(db.Model):
     company_name = db.Column(db.String(150), nullable=False)
     has_resume = db.Column(db.Boolean, default=False)
     has_moa = db.Column(db.Boolean, default=False)
-    # Changed from has_medical_cert to has_med_cert to match database
-    has_med_cert = db.Column(db.Boolean, default=False) 
+    has_medical_cert = db.Column(db.Boolean, default=False)
     expiration_date = db.Column(db.Date, nullable=True)
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
+    
+    # These must be added to match your routes.py
+    name = db.Column(db.String(150), nullable=True)
+    status = db.Column(db.String(50), nullable=True)
+    year_section = db.Column(db.String(50), nullable=True)
+    
+    # These properties are needed for your route's grouped_records logic
+    @property
+    def year_only(self):
+        # Assuming you have a way to derive this, e.g., from a 'year_section' column
+        return self.year_section.split('-')[0] if self.year_section else None
+
+    @property
+    def section_only(self):
+        return self.year_section.split('-')[1] if self.year_section and '-' in self.year_section else None
 
     @property
     def days_left(self):
