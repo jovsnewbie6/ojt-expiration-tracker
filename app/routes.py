@@ -327,9 +327,10 @@ def student_register():
         student_number = request.form.get("student_number", "").strip()
         full_name = request.form.get("full_name", "").strip()
         year_section = request.form.get("year_section", "").strip()
+        email = request.form.get("email", "").strip() # Capture email
         password = request.form.get("password", "").strip()
 
-        if not student_number or not full_name or not year_section or not password:
+        if not student_number or not full_name or not year_section or not email or not password:
             flash("Please complete all registration fields.", "error")
             return render_template("register.html")
 
@@ -359,10 +360,11 @@ def student_register():
         # Create and save new student
         try:
             student = Student(
+                username=student_number, # Setting username to student_number
                 student_number=student_number,
                 name=full_name,
                 year_section=year_section,
-                email=None,
+                email=email # Saving email
             )
             logger.info(f"Setting password for student: {student_number}")
             student.set_password(password)
