@@ -60,6 +60,9 @@ class Student(UserMixin, db.Model):
     records = db.relationship('StudentRecord', backref='student_owner', lazy=True, cascade="all, delete-orphan")
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
+    permissions = db.relationship('Permission', secondary=user_permissions, lazy='subquery',
+                                  backref=db.backref('students', lazy=True))
+
     def get_id(self):
         return f"student_{self.id}"
 
