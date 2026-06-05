@@ -891,3 +891,9 @@ body.dark-mode .delete-button {
         padding: 14px 12px;
     }
 }
+.attendance-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f3f4f6;
+    z-index: 10;
+}

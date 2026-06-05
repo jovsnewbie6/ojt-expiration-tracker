@@ -455,28 +455,31 @@ def student_login():
                 flash("Please provide both student number and password.", "error")
                 return render_template("student_login.html")
             
-            # Change student_number=student_number to username=student_number
-            student = Student.query.filter_by(username=student_number).first()
+            # Search by student_number, as this is the primary identifier for students
+            student = Student.query.filter_by(student_number=student_number).first()
 
             if student and student.check_password(password):
                 # Check if account is active
                 if not student.is_active:
-                    logger.warning("Login attempt for deactivated student account")
+                    logger.warning(f"Login attempt for deactivated account: {student_number}")
                     flash("This account has been deactivated. Please contact support.", "error")
                     return render_template("student_login.html")
                 
                 login_user(student)
-                logger.info("Student login successful")
-                flash("Student login successful.", "success")
+                logger.info(f"Student login successful: {student_number}")
+                flash("Login successful.", "success")
+                
+                # Role-based redirection
                 if student.role != "student":
                     return redirect(url_for("main.admin_dashboard"))
                 return redirect(url_for("main.student_portal"))
             else:
-                logger.warning("Failed student login attempt")
-                flash("Invalid student credentials.", "error")
+                logger.warning(f"Failed login attempt for: {student_number}")
+                flash("Invalid student number or password.", "error")
+                
         except Exception as e:
-            logger.error("Error during student login", exc_info=True)
-            flash("An error occurred during login. Please try again.", "error")
+            logger.error(f"Error during student login: {str(e)}", exc_info=True)
+            flash("An internal error occurred. Please try again.", "error")
 
     return render_template("student_login.html")
 
