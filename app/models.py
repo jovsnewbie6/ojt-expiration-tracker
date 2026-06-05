@@ -103,16 +103,14 @@ class StudentRecord(db.Model):
     
     # Status Tracking
     is_complete = db.Column(db.Boolean, default=False)
-    comments = db.Column(db.Text, nullable=True) # Added missing field
+    comments = db.Column(db.Text, nullable=True)
+    attachments = db.Column(db.String(255), nullable=True)
+    student_count = db.Column(db.Integer, nullable=True)
+    progress = db.Column(db.Integer, default=0, nullable=True) # Added to fix the last error
     
     # Metadata
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
-    attachments = db.Column(db.String(255), nullable=True)
-    student_count = db.Column(db.Integer, nullable=True)
-    name = db.Column(db.String(150), nullable=True)
-    status = db.Column(db.String(50), nullable=True)
-    year_section = db.Column(db.String(50), nullable=True)
     
     @property
     def year_only(self):
