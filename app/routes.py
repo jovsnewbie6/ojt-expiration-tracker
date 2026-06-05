@@ -1202,8 +1202,9 @@ def student_attendance():
             from datetime import datetime
             
             # Get form data
-            attendance_date = request.form.get("attendance_date", "").strip()
-            attendance_time = request.form.get("attendance_time", "").strip()
+            now = datetime.now()
+            attendance_date = now.date().isoformat()  # Use current date
+            attendance_time = now.time().strftime("%H:%M:%S")  # Use current time
             status = request.form.get("status", "Present").strip()
             
             # Validate
@@ -1219,8 +1220,8 @@ def student_attendance():
                 student_id=current_user.id,
                 student_name=current_user.name,
                 student_section=current_user.year_section or "N/A",
-                attendance_date=datetime.strptime(attendance_date, "%Y-%m-%d").date(),
-                attendance_time=attendance_time,
+                attendance_date=now.date(),
+                attendance_time=now.time().strftime("%H:%M:%S"),
                 status=status
             )
             
