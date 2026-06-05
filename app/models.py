@@ -80,19 +80,27 @@ class StudentRecord(db.Model):
     __tablename__ = "student_records"
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
+    
+    # Core Data
     notarized_date = db.Column(db.Date, nullable=True)
     course = db.Column(db.String(100), nullable=True)
     business_nature = db.Column(db.String(255), nullable=True)
     validity = db.Column(db.String(100), nullable=True)
     company_name = db.Column(db.String(150), nullable=False)
+    expiration_date = db.Column(db.Date, nullable=True)
+    
+    # Checkboxes
     has_resume = db.Column(db.Boolean, default=False)
     has_moa = db.Column(db.Boolean, default=False)
     has_medical_cert = db.Column(db.Boolean, default=False)
-    expiration_date = db.Column(db.Date, nullable=True)
+    has_consent_form = db.Column(db.Boolean, default=False)
+    has_insurance = db.Column(db.Boolean, default=False)
+    has_intent_letter = db.Column(db.Boolean, default=False)
+    has_endorsement_letter = db.Column(db.Boolean, default=False)
+    
+    # Metadata
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
-    
-    # Matching the routes.py and database columns
     name = db.Column(db.String(150), nullable=True)
     status = db.Column(db.String(50), nullable=True)
     year_section = db.Column(db.String(50), nullable=True)
