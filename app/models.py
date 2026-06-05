@@ -30,11 +30,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     # Change your existing relationship to this:
-    permissions = db.relationship(
-    'Permission', 
-    secondary=user_permissions, 
-    back_populates='users' # or 'students' for the Student model
-)
+    permissions = db.relationship('Permission', secondary=user_permissions, back_populates='users')
     
     @property
     def is_admin(self):
@@ -70,11 +66,7 @@ class Student(UserMixin, db.Model):
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
     # Change your existing relationship to this:
-    permissions = db.relationship(
-    'Permission', 
-    secondary=user_permissions, 
-    back_populates='users' # or 'students' for the Student model
-)
+    permissions = db.relationship('Permission', secondary=user_permissions, back_populates='students')
 
     def get_id(self):
         return f"student_{self.id}"
