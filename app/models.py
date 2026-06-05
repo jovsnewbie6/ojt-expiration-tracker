@@ -80,6 +80,7 @@ class StudentRecord(db.Model):
     __tablename__ = "student_records"
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
+    course = db.Column(db.String(100), nullable=True)
     company_name = db.Column(db.String(150), nullable=False)
     has_resume = db.Column(db.Boolean, default=False)
     has_moa = db.Column(db.Boolean, default=False)
