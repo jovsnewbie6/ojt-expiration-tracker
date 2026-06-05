@@ -57,7 +57,7 @@ class Student(UserMixin, db.Model):
     name = db.Column(db.String(150), nullable=False)
     
     # Existing fields
-    section = db.Column(db.String(50), nullable=False)
+    year_section = db.Column(db.String(50), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="student")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
