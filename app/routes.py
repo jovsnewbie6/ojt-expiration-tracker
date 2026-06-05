@@ -453,7 +453,8 @@ def student_login():
                 flash("Please provide both student number and password.", "error")
                 return render_template("student_login.html")
             
-            student = Student.query.filter_by(student_number=student_number).first()
+            # Change student_number=student_number to username=student_number
+            student = Student.query.filter_by(username=student_number).first()
 
             if student and student.check_password(password):
                 # Check if account is active

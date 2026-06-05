@@ -1,6 +1,7 @@
 from app import db
 from flask_login import UserMixin
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Junction bridge linking non-student users with their administrative checkboxes
 user_permissions = db.Table(
@@ -35,6 +36,12 @@ class User(UserMixin, db.Model):
             return True # Master overrides
         return any(p.name == permission_name for p in self.permissions)
 
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
 class Student(UserMixin, db.Model):
     __tablename__ = "students"
     id = db.Column(db.Integer, primary_key=True)
@@ -51,6 +58,12 @@ class Student(UserMixin, db.Model):
 
     def get_id(self):
         return f"student_{self.id}"
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class StudentRecord(db.Model):
     __tablename__ = "student_records"
