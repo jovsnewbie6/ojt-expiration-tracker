@@ -23,7 +23,7 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'main.login'
+    login_manager.login_view = 'main.admin_login'
 
     # Register Blueprints (Adjust names based on your project files)
     from app.routes import main_bp
