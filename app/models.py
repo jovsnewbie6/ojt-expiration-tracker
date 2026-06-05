@@ -108,6 +108,7 @@ class StudentRecord(db.Model):
     # Metadata
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
+    student_count = db.Column(db.Integer, nullable=True, default=0)
     name = db.Column(db.String(150), nullable=True)
     status = db.Column(db.String(50), nullable=True)
     year_section = db.Column(db.String(50), nullable=True)
