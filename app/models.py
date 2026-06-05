@@ -82,21 +82,28 @@ class StudentRecord(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
     
     # Core Data
-    notarized_date = db.Column(db.Date, nullable=True)
+    name = db.Column(db.String(150), nullable=True)
     course = db.Column(db.String(100), nullable=True)
+    year_section = db.Column(db.String(50), nullable=True)
+    company_name = db.Column(db.String(150), nullable=False)
     business_nature = db.Column(db.String(255), nullable=True)
     validity = db.Column(db.String(100), nullable=True)
-    company_name = db.Column(db.String(150), nullable=False)
+    notarized_date = db.Column(db.Date, nullable=True)
     expiration_date = db.Column(db.Date, nullable=True)
     
     # Checkboxes
+    status = db.Column(db.String(50), nullable=True)
     has_resume = db.Column(db.Boolean, default=False)
-    has_moa = db.Column(db.Boolean, default=False)
     has_medical_cert = db.Column(db.Boolean, default=False)
     has_consent_form = db.Column(db.Boolean, default=False)
+    has_moa = db.Column(db.Boolean, default=False)
     has_insurance = db.Column(db.Boolean, default=False)
     has_intent_letter = db.Column(db.Boolean, default=False)
     has_endorsement_letter = db.Column(db.Boolean, default=False)
+    
+    # Status Tracking
+    is_complete = db.Column(db.Boolean, default=False)
+    comments = db.Column(db.Text, nullable=True) # Added missing field
     
     # Metadata
     hours_required = db.Column(db.Integer, default=486)
