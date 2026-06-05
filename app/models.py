@@ -76,7 +76,8 @@ class StudentRecord(db.Model):
     company_name = db.Column(db.String(150), nullable=False)
     has_resume = db.Column(db.Boolean, default=False)
     has_moa = db.Column(db.Boolean, default=False)
-    has_medical_cert = db.Column(db.Boolean, default=False)
+    # Changed from has_medical_cert to has_med_cert to match database
+    has_med_cert = db.Column(db.Boolean, default=False) 
     expiration_date = db.Column(db.Date, nullable=True)
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
