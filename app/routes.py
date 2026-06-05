@@ -7,6 +7,7 @@ import uuid
 import logging
 from collections import defaultdict
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
@@ -1205,15 +1206,11 @@ def student_attendance():
             from datetime import datetime
             
             # Get form data
-            now = datetime.now()
+            now = datetime.now(ZoneInfo("Asia/Manila"))
             attendance_date = now.date().isoformat()  # Use current date
             attendance_time = now.time().strftime("%H:%M:%S")  # Use current time
             status = request.form.get("status", "Present").strip()
             
-            # Validate
-            if not attendance_date or not attendance_time:
-                flash("Please fill in date and time.", "error")
-                return render_template("student_attendance.html")
             
             if status not in ["Present", "Absent"]:
                 status = "Present"
@@ -1224,7 +1221,7 @@ def student_attendance():
                 student_name=current_user.name,
                 student_section=current_user.year_section or "N/A",
                 attendance_date=now.date(),
-                attendance_time=now.time().strftime("%H:%M:%S"),
+                attendance_time=now.time(),
                 status=status
             )
             
