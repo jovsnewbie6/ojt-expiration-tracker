@@ -38,7 +38,7 @@ main_bp = Blueprint("main", __name__)
 
 REQUIREMENT_FIELDS = [
     ("has_resume", "Resume"),
-    ("has_med_cert", "Medical Certificate"),
+    ("has_medical_cert", "Medical Certificate"),
     ("has_consent_form", "Consent Form"),
     ("has_moa", "MOA"),
     ("has_insurance", "Insurance"),
