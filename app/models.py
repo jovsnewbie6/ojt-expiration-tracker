@@ -21,10 +21,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(30), nullable=False, default="faculty") # admin, faculty, coordinator
+    role = db.Column(db.String(30), nullable=False, default="faculty")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
-    # Permissions dynamic tracking mapping
     permissions = db.relationship('Permission', secondary=user_permissions, lazy='subquery',
                                   backref=db.backref('users', lazy=True))
     
@@ -37,7 +36,7 @@ class User(UserMixin, db.Model):
 
     def has_permission(self, permission_name):
         if self.role == 'admin':
-            return True # Master overrides
+            return True
         return any(p.name == permission_name for p in self.permissions)
 
     def set_password(self, password):
@@ -50,20 +49,14 @@ class Student(UserMixin, db.Model):
     __tablename__ = "students"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    # Add the email column here
     email = db.Column(db.String(150), nullable=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    
-    # Required by routes.py for registration and lookups
     student_number = db.Column(db.String(80), unique=True, nullable=False)
     name = db.Column(db.String(150), nullable=False)
-    
-    # Existing fields
     year_section = db.Column(db.String(50), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="student")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
-    # Relationships
     records = db.relationship('StudentRecord', backref='student_owner', lazy=True, cascade="all, delete-orphan")
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
@@ -106,11 +99,20 @@ class StudentRecord(db.Model):
     comments = db.Column(db.Text, nullable=True)
     attachments = db.Column(db.String(255), nullable=True)
     student_count = db.Column(db.Integer, nullable=True)
-    progress = db.Column(db.Integer, default=0, nullable=True) # Added to fix the last error
+    progress = db.Column(db.Integer, default=0, nullable=True)
     
     # Metadata
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
+    
+    def calculate_progress(self):
+        fields = [
+            self.has_resume, self.has_medical_cert, self.has_consent_form, 
+            self.has_moa, self.has_insurance, self.has_intent_letter, 
+            self.has_endorsement_letter
+        ]
+        completed = sum(1 for field in fields if field is True)
+        return int((completed / 7) * 100)
     
     @property
     def year_only(self):
@@ -135,5 +137,5 @@ class Attendance(db.Model):
     student_section = db.Column(db.String(50), nullable=False)
     attendance_date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     attendance_time = db.Column(db.Time, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="Present") # Present, Absent
+    status = db.Column(db.String(20), nullable=False, default="Present")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
