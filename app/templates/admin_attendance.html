@@ -182,7 +182,7 @@
                                         <td>{{ record.student_name }}</td>
                                         <td>{{ record.student_section }}</td>
                                         <td>{{ record.attendance_date.strftime("%Y-%m-%d") }}</td>
-                                        <td>{{ record.attendance_time }}</td>
+                                        <td>{{ record.attendance_time.strftime('%I:%M %p') }}</td>
                                         <td>
                                             {% if record.status == "Present" %}
                                                 <span class="status-badge status-present">✓ Present</span>
