@@ -674,10 +674,11 @@ def admin_logout():
 
 @main_bp.route("/admin/dashboard")
 @login_required
-#@staff_required
+@staff_required
 def admin_dashboard():
     search_term = request.args.get("search", "").strip()
     records_query = StudentRecord.query.order_by(StudentRecord.expiration_date)
+    records = records_query.all()  # Fetch all records first to avoid multiple queries in the loop below
 
     if search_term:
         records_query = records_query.filter(func.lower(StudentRecord.name).contains(search_term.lower()))
