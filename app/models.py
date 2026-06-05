@@ -80,6 +80,7 @@ class StudentRecord(db.Model):
     __tablename__ = "student_records"
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
+    notarized_date = db.Column(db.Date, nullable=True)
     course = db.Column(db.String(100), nullable=True)
     business_nature = db.Column(db.String(255), nullable=True)
     validity = db.Column(db.String(100), nullable=True)
