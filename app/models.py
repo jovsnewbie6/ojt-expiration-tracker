@@ -51,6 +51,12 @@ class Student(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    
+    # Required by routes.py for registration and lookups
+    student_number = db.Column(db.String(80), unique=True, nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    
+    # Existing fields
     student_name = db.Column(db.String(150), nullable=False)
     section = db.Column(db.String(50), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="student")
@@ -81,20 +87,18 @@ class StudentRecord(db.Model):
     hours_required = db.Column(db.Integer, default=486)
     hours_rendered = db.Column(db.Integer, default=0)
     
-    # These must be added to match your routes.py
+    # Matching the routes.py and database columns
     name = db.Column(db.String(150), nullable=True)
     status = db.Column(db.String(50), nullable=True)
     year_section = db.Column(db.String(50), nullable=True)
     
-    # These properties are needed for your route's grouped_records logic
     @property
     def year_only(self):
-        # Assuming you have a way to derive this, e.g., from a 'year_section' column
-        return self.year_section.split('-')[0] if self.year_section else None
+        return self.year_section.split('-')[0] if self.year_section and '-' in self.year_section else "N/A"
 
     @property
     def section_only(self):
-        return self.year_section.split('-')[1] if self.year_section and '-' in self.year_section else None
+        return self.year_section.split('-')[1] if self.year_section and '-' in self.year_section else "N/A"
 
     @property
     def days_left(self):
