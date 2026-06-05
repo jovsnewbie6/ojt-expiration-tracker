@@ -17,6 +17,10 @@ class Permission(db.Model):
     name = db.Column(db.String(60), unique=True, nullable=False)
     description = db.Column(db.String(200), nullable=True)
 
+    # Add these relationships to link back to your users and students
+    users = db.relationship('User', secondary=user_permissions, back_populates='permissions', overlaps="students")
+    students = db.relationship('Student', secondary=user_permissions, back_populates='permissions', overlaps="users")
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -25,12 +29,11 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(30), nullable=False, default="faculty")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
+    # Change your existing relationship to this:
     permissions = db.relationship(
     'Permission', 
     secondary=user_permissions, 
-    lazy='subquery',
-    backref=db.backref('users', lazy=True),
-    overlaps="permissions,students" # Add this line
+    back_populates='users' # or 'students' for the Student model
 )
     
     @property
@@ -66,12 +69,11 @@ class Student(UserMixin, db.Model):
     records = db.relationship('StudentRecord', backref='student_owner', lazy=True, cascade="all, delete-orphan")
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
+    # Change your existing relationship to this:
     permissions = db.relationship(
     'Permission', 
     secondary=user_permissions, 
-    lazy='subquery',
-    backref=db.backref('students', lazy=True),
-    overlaps="permissions,users" # Add this line
+    back_populates='users' # or 'students' for the Student model
 )
 
     def get_id(self):
