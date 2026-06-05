@@ -771,7 +771,7 @@ def admin_edit(record_id):
         record.comments = request.form.get("comments", "").strip()
         
         record.has_resume = bool(request.form.get("has_resume"))
-        record.has_med_cert = bool(request.form.get("has_med_cert"))
+        record.has_medical_cert = bool(request.form.get("has_medical_cert"))
         record.has_consent_form = bool(request.form.get("has_consent_form"))
         record.has_moa = bool(request.form.get("has_moa"))
         record.has_insurance = bool(request.form.get("has_insurance"))
