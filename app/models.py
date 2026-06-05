@@ -50,6 +50,8 @@ class Student(UserMixin, db.Model):
     __tablename__ = "students"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    # Add the email column here
+    email = db.Column(db.String(150), nullable=True)
     password_hash = db.Column(db.String(256), nullable=False)
     
     # Required by routes.py for registration and lookups
