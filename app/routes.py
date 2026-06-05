@@ -239,7 +239,7 @@ def student_portal():
         expiration_date_text = request.form.get("expiration_date", "")
         attachments = request.files.getlist("attachments")
         has_resume = bool(request.form.get("has_resume"))
-        has_med_cert = bool(request.form.get("has_med_cert"))
+        has_medical_cert = bool(request.form.get("has_medical_cert"))
         has_consent_form = bool(request.form.get("has_consent_form"))
         has_moa = bool(request.form.get("has_moa"))
         has_insurance = bool(request.form.get("has_insurance"))
@@ -276,13 +276,13 @@ def student_portal():
                     expiration_date=expiration_date,
                     status="Pending",
                     has_resume=has_resume,
-                    has_med_cert=has_med_cert,
+                    has_medical_cert=has_medical_cert,
                     has_consent_form=has_consent_form,
                     has_moa=has_moa,
                     has_insurance=has_insurance,
                     has_intent_letter=has_intent_letter,
                     has_endorsement_letter=has_endorsement_letter,
-                    is_complete=(has_resume and has_med_cert and has_consent_form and has_moa and has_insurance and has_intent_letter and has_endorsement_letter),
+                    is_complete=(has_resume and has_medical_cert and has_consent_form and has_moa and has_insurance and has_intent_letter and has_endorsement_letter),
                     comments="",
                 )
                 db.session.add(record)
