@@ -141,17 +141,22 @@ def save_attachments(record, files):
     if not files:
         return []
     upload_folder = current_app.config["UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)
     record_folder = os.path.join(upload_folder, f"record_{record.id}")
     os.makedirs(record_folder, exist_ok=True)
 
     saved_files = []
-    for file in files:
-        if file and allowed_file(file.filename):
-            original_name = secure_filename(file.filename)
-            unique_name = f"{uuid.uuid4().hex}_{original_name}"
-            target_path = os.path.join(record_folder, unique_name)
-            file.save(target_path)
-            saved_files.append({"original": original_name, "filename": unique_name})
+    try:
+        for file in files:
+            if file and allowed_file(file.filename):
+                original_name = secure_filename(file.filename)
+                unique_name = f"{uuid.uuid4().hex}_{original_name}"
+                target_path = os.path.join(record_folder, unique_name)
+                file.save(target_path)
+                saved_files.append({"original": original_name, "filename": unique_name})
+    except Exception as e:
+        current_app.logger.error(f"Error saving attachments: {str(e)}")
+    
     return saved_files
 
 
@@ -159,15 +164,14 @@ def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash("Please sign in as an admin to access that page.", "error")
             return redirect(url_for("main.admin_login"))
 
-        if not getattr(current_user, "is_admin", False):
-            flash("Admin access is required to view that page.", "error")
+        # Safety check: ensure user is specifically an admin
+        if getattr(current_user, "role", None) != "admin":
+            flash("Admin access required.", "error")
             return redirect(url_for("main.admin_login"))
 
         return view(*args, **kwargs)
-
     return wrapped
 
 
