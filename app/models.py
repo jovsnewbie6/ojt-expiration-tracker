@@ -27,6 +27,10 @@ class User(UserMixin, db.Model):
     # Permissions dynamic tracking mapping
     permissions = db.relationship('Permission', secondary=user_permissions, lazy='subquery',
                                   backref=db.backref('users', lazy=True))
+    
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
 
     def get_id(self):
         return f"admin_{self.id}"
