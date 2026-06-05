@@ -3,11 +3,12 @@ from flask_login import UserMixin
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Junction bridge linking non-student users with their administrative checkboxes
+# Junction bridge linking both users and students with their administrative checkboxes
 user_permissions = db.Table(
     'user_permissions',
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('permission_id', db.Integer, db.ForeignKey('permissions.id', ondelete='CASCADE'), primary_key=True)
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True),
+    db.Column('student_id', db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=True),
+    db.Column('permission_id', db.Integer, db.ForeignKey('permissions.id', ondelete='CASCADE'), primary_key=False)
 )
 
 class Permission(db.Model):
