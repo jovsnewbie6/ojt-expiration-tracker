@@ -128,6 +128,24 @@ class StudentRecord(db.Model):
             delta = self.expiration_date - datetime.utcnow().date()
             return max(0, delta.days)
         return 0
+    
+    @property
+    def has_all_requirements(self):
+        # Returns True if all required fields are checked
+        return all([
+            self.has_resume, self.has_medical_cert, self.has_consent_form, 
+            self.has_moa, self.has_insurance, self.has_intent_letter, 
+            self.has_endorsement_letter
+        ])
+
+    @property
+    def attachment_items(self):
+        # Parses the JSON string into a Python list
+        import json
+        try:
+            return json.loads(self.attachments) if self.attachments else []
+        except:
+            return []
 
 class Attendance(db.Model):
     __tablename__ = "attendance"
