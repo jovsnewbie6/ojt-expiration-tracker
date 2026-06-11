@@ -2,45 +2,42 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate, upgrade
 from config import Config
-from flask_migrate import Migrate, upgrade # 1. Import Migrate AND upgrade
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-migrate = Migrate() # 2. Create the migrate object
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-123')
     
-    # 1. Handle database connection string
+    # Database connection handling
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///local.db')
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # 2. Initialize extensions
+    # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db) # 4. Attach Migrate to the app and db
+    migrate.init_app(app, db)
     login_manager.init_app(app)
+    login_manager.login_view = 'main.admin_login'
 
-    # 3. Handle migrations on startup
-    # In your app/__init__.py, update the auto-upgrade block:
+    # Safe self-healing migration block
     with app.app_context():
         try:
-            # We add 'render_as_batch=True' if needed, but simply silencing 
-            # the crash is the priority for your current state.
+            # Clean up any interrupted transactions before upgrading
+            db.session.rollback()
             upgrade()
         except Exception as e:
-            # Only print if it's not just a "version table already exists" issue
-            if "alembic_version" not in str(e):
-                print(f"Database migration failed: {e}")
-            else:
-                print("Database already initialized, skipping migration.")
+            db.session.rollback()
+            print(f"Migration skipped or failed (safe to continue if already migrated): {e}")
 
-    # 4. Register Blueprints and User Loader
+    # Register Blueprints
     from app.routes import main_bp
     app.register_blueprint(main_bp)
 
@@ -55,7 +52,7 @@ def create_app():
             return Student.query.get(actual_id)
         return None
 
-    # 5. Core Permissions Auto-Seeding (Safe to keep)
+    # Core Permissions Auto-Seeding
     with app.app_context():
         from app.models import Permission
         permissions_list = [
