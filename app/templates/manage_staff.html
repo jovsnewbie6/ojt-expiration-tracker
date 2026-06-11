@@ -127,6 +127,14 @@
                                                         <button class="edit-link" type="submit" onclick="return confirm('Reactivate this account?');">Reactivate</button>
                                                     {% endif %}
                                                 </form>
+                                                <form method="post" action="{{ url_for('main.delete_admin', id=user.id) }}" style="display: inline; margin-left: 5px;">
+                                                    <button type="submit" 
+                                                            class="btn-danger-custom" 
+                                                            onclick="return confirm('WARNING: Are you sure you want to PERMANENTLY delete this staff account? This action cannot be undone.');"
+                                                            style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                                                        Delete
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     {% endfor %}

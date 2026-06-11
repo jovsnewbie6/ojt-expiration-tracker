@@ -1176,21 +1176,20 @@ def delete_student(id):
 
 @main_bp.route('/delete-admin/<int:id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_admin(id):
-    if not current_user.is_admin:
-        flash('Unauthorized access.', 'error')
-        return redirect(url_for('main.index'))
+    from app.models import User # Ensure you import the correct model
     
-    # Prevent the Director from deleting themselves!
+    # Safety Check: Cannot delete yourself
     if current_user.id == id:
         flash('You cannot delete your own account.', 'error')
-        return redirect(url_for('main.admin_dashboard'))
+        return redirect(url_for('main.admin_manage_staff'))
 
-    admin = Admin.query.get_or_404(id)
+    admin = User.query.get_or_404(id)
     db.session.delete(admin)
     db.session.commit()
-    flash('Admin account removed.', 'success')
-    return redirect(url_for('main.admin_dashboard'))
+    flash(f'Admin account {admin.username} deleted successfully.', 'success')
+    return redirect(url_for('main.admin_manage_staff'))
 
 
 # ==================== ATTENDANCE SECTION ====================
