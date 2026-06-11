@@ -878,66 +878,41 @@ def normalize_year_section(section):
     return normalized
 
 
-@main_bp.route("/admin/manage-students")
+@main_bp.route("/admin/manage-students", methods=["GET"])
 @login_required
 @staff_required
 def admin_manage_students():
-    """Display and manage student account status."""
-    # Check database connection first
-    from app.decorators import check_database_connection
-    db_connected, db_error = check_database_connection()
-    if not db_connected:
-        logger.error(f"Database connection failed in manage_students: {db_error}")
-        error_detail = (db_error[:50] if db_error else "Unknown error")
-        flash(f"Database connection error. Please try again. (Error: {error_detail})", "error")
-        return redirect(url_for("main.admin_dashboard"))
+    selected_year = request.args.get("year")
+    
+    # 1. Base Query
+    query = Student.query
+    
+    # 2. Filter by year (extracting from student_number)
+    if selected_year:
+        query = query.filter(Student.student_number.startswith(selected_year))
+    
+    # 3. Fetch students once (sorted by name)
+    students = query.order_by(Student.name).all()
 
-    try:
-        # Fetch students with error handling
-        try:
-            logger.info("Fetching all students from database...")
-            students = Student.query.order_by(Student.name).all()
-            logger.info(f"Successfully fetched {len(students)} students")
-        except Exception as e:
-            logger.error(f"Database error fetching students: {str(e)}", exc_info=True)
-            logger.error(f"Exception type: {type(e).__name__}")
-            # Identify specific database issues
-            error_str = str(e).lower()
-            if "connection" in error_str or "timeout" in error_str or "pool" in error_str:
-                flash("Database connection error. The system is temporarily unavailable. Please try again.", "error")
-                logger.error(f"Connection pool or timeout issue detected: {error_str}")
-            elif "table" in error_str or "does not exist" in error_str:
-                flash("System error: students table not found. Contact support.", "error")
-                logger.error(f"Table doesn't exist: {error_str}")
-            else:
-                flash("Error fetching student data. Please try again or contact support.", "error")
-            return redirect(url_for("main.admin_dashboard"))
-        
-        # Group students by section
-        try:
-            section_groups = defaultdict(list)
-            for student in students:
-                section_key = normalize_year_section(student.year_section)
-                section_groups[section_key].append(student)
+    # 4. Extract unique years from existing student numbers 
+    # (assuming format like 2023-XXXX-MN-0)
+    # We take the first 4 characters of the student_number
+    all_years = sorted(list({s.student_number[:4] for s in Student.query.all() if s.student_number}))
 
-            ordered_section_groups = sorted(
-                section_groups.items(),
-                key=lambda item: item[0].lower(),
-            )
-        except Exception as e:
-            logger.error(f"Error grouping students: {str(e)}", exc_info=True)
-            flash("Error processing student data. Please try again or contact support.", "error")
-            return redirect(url_for("main.admin_dashboard"))
+    # 5. Group by section
+    section_groups = defaultdict(list)
+    for student in students:
+        section_key = normalize_year_section(student.year_section)
+        section_groups[section_key].append(student)
 
-        return render_template(
-            "manage_students.html",
-            section_groups=ordered_section_groups,
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in manage_students: {str(e)}", exc_info=True)
-        logger.error(f"Exception type: {type(e).__name__}")
-        flash("An error occurred while loading the student management page. Please try again or contact support.", "error")
-        return redirect(url_for("main.admin_dashboard"))
+    ordered_section_groups = sorted(section_groups.items(), key=lambda item: item[0].lower())
+
+    return render_template(
+        "manage_students.html",
+        section_groups=ordered_section_groups,
+        available_years=all_years,
+        selected_year=selected_year
+    )
 
 
 @main_bp.route("/admin/manage-staff")

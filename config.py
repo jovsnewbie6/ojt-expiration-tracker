@@ -34,7 +34,7 @@ class Config:
     if _database_url.startswith("postgres://"):
         _database_url = _database_url.replace("postgres://", "postgresql://", 1)
     
-    SQLALCHEMY_DATABASE_URI = _database_url
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or 'sqlite:///moa.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Upload folder - use temp directory on Render (files deleted on restart)

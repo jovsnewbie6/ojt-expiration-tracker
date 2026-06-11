@@ -83,6 +83,14 @@
                             <h2>Student Accounts</h2>
                             <p>View and manage all student account statuses.</p>
                         </div>
+                        <form method="GET" action="{{ url_for('main.admin_manage_students') }}" class="filter-form">
+                            <select name="year" onchange="this.form.submit()" class="form-select">
+                                <option value="">All Years</option>
+                                {% for year in available_years %}
+                                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
                     </div>
 
                     <div class="top-nav" style="gap: 10px; margin-bottom: 18px;">
@@ -111,7 +119,7 @@
                                                 <th>Email</th>
                                                 <th>System Role</th>
                                                 <th>Status</th>
-                                                <th>Registered</th>
+                                                <th>Batch Year</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -148,7 +156,7 @@
                                                             <span style="color: #f44336; font-weight: bold;">✗ Deactivated</span>
                                                         {% endif %}
                                                     </td>
-                                                    <td>{{ student.created_at.strftime('%b %d, %Y') if student.created_at else 'N/A' }}</td>
+                                                    <td>{{ student.student_number[:4] if student.student_number else 'N/A' }}</td>
                                                     <td class="row-actions">
                                                         <button
                                                             type="button"

@@ -61,12 +61,13 @@ class Student(UserMixin, db.Model):
     year_section = db.Column(db.String(50), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="student")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    enrollment_year = db.Column(db.String(4), nullable=True) # Add this
 
     records = db.relationship('StudentRecord', backref='student_owner', lazy=True, cascade="all, delete-orphan")
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
     # Change your existing relationship to this:
-    permissions = db.relationship('Permission', secondary=user_permissions, back_populates='students')
+    permissions = db.relationship('Permission', secondary=user_permissions, overlaps="permissions,users")
 
     def get_id(self):
         return f"student_{self.id}"
