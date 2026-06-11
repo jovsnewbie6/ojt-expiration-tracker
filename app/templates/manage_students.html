@@ -45,318 +45,177 @@
                 <h3>Account Status</h3>
                 <p>Use this page to deactivate or reactivate student accounts. Deactivated accounts maintain audit trails.</p>
             </div>
-                </aside>
+        </aside>
 
-                <div class="page-content">
-                    <header class="site-header">
-                        <div class="header-top">
-                            <div class="brand">
-                                <div class="brand-logo">
-                                    <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
-                                </div>
-                                <div>
-                                    <p class="brand-caption">Admin Dashboard</p>
-                                    <h1>Manage Student Accounts</h1>
-                                </div>
-                            </div>
-                            <div class="header-actions">
-                                <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
-                            </div>
+        <div class="page-content">
+            <header class="site-header">
+                <div class="header-top">
+                    <div class="brand">
+                        <div class="brand-logo">
+                            <img src="https://imgs.search.brave.com/bavo48ki0iLB5YoPFhoQ-o3Xrlqp4xehfaHYPDgkB8U/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy90/aHVtYi8yLzJlL1Bv/bHl0ZWNobmljX1Vu/aXZlcnNpdHlfb2Zf/dGhlX1BoaWxpcHBp/bmVzLnN2Zy8yNTBw/eC1Qb2x5dGVjaG5p/Y19Vbml2ZXJzaXR5/X29mX3RoZV9QaGls/aXBwaW5lcy5zdmcu/cG5n" alt="PUP Logo" />
                         </div>
-                        <p class="site-intro">Manage student account status. Deactivating a student prevents them from logging in while preserving their records.</p>
-                    </header>
-
-                    <main class="main-content">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            <div class="messages">
-                                {% for category, message in messages %}
-                                    <div class="message {{ category }}">{{ message }}</div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-
-                <section class="panel">
-                    <div class="panel-header">
                         <div>
-                            <h2>Student Accounts</h2>
-                            <p>View and manage all student account statuses.</p>
+                            <p class="brand-caption">Admin Dashboard</p>
+                            <h1>Manage Student Accounts</h1>
                         </div>
-                        <form method="GET" action="{{ url_for('main.admin_manage_students') }}" class="filter-form">
-                            <select name="year" onchange="this.form.submit()" class="form-select">
-                                <option value="">All Years</option>
-                                {% for year in available_years %}
-                                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-                                {% endfor %}
-                            </select>
-                        </form>
                     </div>
-
-                    <div class="top-nav" style="gap: 10px; margin-bottom: 18px;">
-                        <span>Students</span>
-                        <span style="color: #7c1326; font-weight: 700;">/</span>
-                        <span style="font-weight: 700;">Manage Students</span>
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="theme-toggle" type="button">Dark Mode</button>
                     </div>
-
-                    {% if section_groups %}
-                        {% for section, students in section_groups %}
-                            {% set section_id = section|replace(' ', '_')|replace('/', '-')|replace('\\', '-')|replace('.', '-')|lower %}
-                            <div class="section-block" id="section-{{ section_id }}">
-                                <div class="section-header">
-                                    <div>
-                                        <h3>{{ section }}</h3>
-                                        <p>Students in this section are grouped together for easier access.</p>
-                                    </div>
-                                    <span class="section-count">{{ students|length }} student{{ 's' if students|length != 1 }}</span>
-                                </div>
-                                <div class="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Student Name</th>
-                                                <th>Student Number</th>
-                                                <th>Email</th>
-                                                <th>System Role</th>
-                                                <th>Status</th>
-                                                <th>Batch Year</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for student in students %}
-                                                <tr class="{% if not student.is_active %}deactivated-row{% endif %}">
-                                                    <td>{{ student.name }}</td>
-                                                    <td>{{ student.student_number }}</td>
-                                                    <td>{{ student.email or 'N/A' }}</td>
-                                                    <td>
-                                                        <span style="
-                                                            padding: 4px 8px;
-                                                            border-radius: 3px;
-                                                            font-size: 12px;
-                                                            font-weight: bold;
-                                                            {% if student.role == 'student' %}
-                                                                background-color: #E3F2FD;
-                                                                color: #1976D2;
-                                                            {% elif student.role == 'faculty' %}
-                                                                background-color: #F3E5F5;
-                                                                color: #7B1FA2;
-                                                            {% elif student.role == 'coordinator' %}
-                                                                background-color: #FFF3E0;
-                                                                color: #E65100;
-                                                            {% endif %}
-                                                        ">
-                                                            {{ student.role | title }}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        {% if student.is_active %}
-                                                            <span style="color: #4CAF50; font-weight: bold;">✓ Active</span>
-                                                        {% else %}
-                                                            <span style="color: #f44336; font-weight: bold;">✗ Deactivated</span>
-                                                        {% endif %}
-                                                    </td>
-                                                    <td>{{ student.student_number[:4] if student.student_number else 'N/A' }}</td>
-                                                    <td class="row-actions">
-                                                        <button
-                                                            type="button"
-                                                            class="edit-link edit-access-button"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#modifyAccessModal"
-                                                            data-student-id="{{ student.id }}"
-                                                            data-student-name='{{ student.name|tojson }}'
-                                                            data-student-role='{{ student.role|tojson }}'
-                                                            data-student-permissions='{{ student.permissions|map(attribute='name')|list|tojson }}'>
-                                                            Edit Access
-                                                        </button>
-                                                        <form method="post" action="{{ url_for('main.toggle_user_status', user_type='student', user_id=student.id) }}" style="display: inline;">
-                                                            {% if student.is_active %}
-                                                                <button class="delete-button" type="submit" onclick="return confirm('Deactivate this student account? They will not be able to log in.');">Deactivate</button>
-                                                            {% else %}
-                                                                <button class="edit-link" type="submit" onclick="return confirm('Reactivate this student account?');">Reactivate</button>
-                                                            {% endif %}
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div style="padding: 20px; text-align: center; color: #999;">
-                            <p>No student accounts found.</p>
-                        </div>
-                    {% endif %}
-                </section>
-
-                <section class="panel help-panel">
-                    <h2>Account Deactivation Policy</h2>
-                    <ul>
-                        <li><strong>Soft Delete:</strong> Deactivating accounts removes access without deleting data—perfect for compliance and audit trails.</li>
-                        <li><strong>Prevents Login:</strong> Deactivated students will see an error message when attempting to log in.</li>
-                        <li><strong>Records Preserved:</strong> All submissions and documents remain in the system for historical records.</li>
-                        <li><strong>Reactivation:</strong> You can reactivate accounts at any time to restore access.</li>
-                    </ul>
-                </section>
-            </main>
-        </div>
-    </div>
-
-    <!-- Modify Student Access Modal -->
-    <div class="modal fade" id="modifyAccessModal" tabindex="-1" aria-labelledby="modifyAccessLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header" style="border-bottom: 2px solid #f0f0f0;">
-                    <h5 class="modal-title" id="modifyAccessLabel">Modify Student System Access</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="modifyAccessForm" method="post" action="{{ url_for('main.modify_student_access') }}">
-                    <input type="hidden" id="modalStudentId" name="student_id" value="" />
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="modalStudentName" class="form-label" style="font-weight: 600;">Student Name</label>
-                            <input type="text" class="form-control" id="modalStudentName" disabled />
-                        </div>
+                <p class="site-intro">Manage student account status. Deactivating a student prevents them from logging in while preserving their records.</p>
+            </header>
 
-                        <div class="mb-3">
-                            <label for="modalStudentRole" class="form-label" style="font-weight: 600;">System Role</label>
-                            <select class="form-select" id="modalStudentRole" name="role" required>
-                                <option value="">Select a role...</option>
-                                <option value="student">Student</option>
-                                <option value="faculty">Faculty</option>
-                                <option value="coordinator">Coordinator</option>
-                            </select>
-                        </div>
-
-                        <!-- Assign Permissions Section -->
-                        <div style="margin-top: 24px; border-top: 1px solid #ddd; padding-top: 20px;">
-                            <h6 style="margin-bottom: 16px; color: #333; font-weight: 600;">Assign Permissions:</h6>
-                            
-                            <!-- OJT & Data Management Card -->
-                            <div style="margin-bottom: 20px; padding: 16px; background-color: #f9f9f9; border-left: 4px solid #4CAF50; border-radius: 4px;">
-                                <h6 style="margin: 0 0 12px 0; color: #333; font-size: 14px; font-weight: 600;">OJT & Data Management</h6>
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                                        <input type="checkbox" name="permissions" value="can_edit_records" style="width: 18px; height: 18px; cursor: pointer;" />
-                                        <span>Edit Student Records</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                                        <input type="checkbox" name="permissions" value="can_bypass_deadlines" style="width: 18px; height: 18px; cursor: pointer;" />
-                                        <span>Grant Extensions</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                                        <input type="checkbox" name="permissions" value="can_manage_exports" style="width: 18px; height: 18px; cursor: pointer;" />
-                                        <span>Excel Import/Export</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Verification & Review Card -->
-                            <div style="margin-bottom: 20px; padding: 16px; background-color: #f9f9f9; border-left: 4px solid #2196F3; border-radius: 4px;">
-                                <h6 style="margin: 0 0 12px 0; color: #333; font-size: 14px; font-weight: 600;">Verification & Review</h6>
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                                        <input type="checkbox" name="permissions" value="can_verify_hours" style="width: 18px; height: 18px; cursor: pointer;" />
-                                        <span>Verify OJT Hours</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                                        <input type="checkbox" name="permissions" value="can_add_comments" style="width: 18px; height: 18px; cursor: pointer;" />
-                                        <span>Add Evaluation Notes</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+            <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages">
+                        {% for category, message in messages %}
+                            <div class="message {{ category }}">{{ message }}</div>
+                        {% endfor %}
                     </div>
-                    <div class="modal-footer" style="border-top: 2px solid #f0f0f0;">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                {% endif %}
+            {% endwith %}
+
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Student Accounts</h2>
+                        <p>View and manage all student account statuses.</p>
                     </div>
-                </form>
-            </div>
-        </div>
+                    <select id="yearFilter" onchange="filterStudents()" class="form-select" style="width: auto;">
+                        <option value="all">All Years</option>
+                        {% for year in available_years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="top-nav" style="gap: 10px; margin-bottom: 18px;">
+                    <span>Students</span>
+                    <span style="color: #7c1326; font-weight: 700;">/</span>
+                    <span style="font-weight: 700;">Manage Students</span>
+                </div>
+
+                {% if section_groups %}
+                    {% for section, students in section_groups %}
+                        {% set section_id = section|replace(' ', '_')|replace('/', '-')|replace('\\', '-')|replace('.', '-')|lower %}
+                        <div class="section-block" id="section-{{ section_id }}">
+                            <div class="section-header">
+                                <div>
+                                    <h3>{{ section }}</h3>
+                                    <p>Students in this section are grouped together for easier access.</p>
+                                </div>
+                                <span class="section-count">{{ students|length }} student{{ 's' if students|length != 1 }}</span>
+                            </div>
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Student Number</th>
+                                            <th>Email</th>
+                                            <th>System Role</th>
+                                            <th>Status</th>
+                                            <th>Batch Year</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student in students %}
+                                            <tr class="student-row {% if not student.is_active %}deactivated-row{% endif %}" data-year="{{ student.student_number[:4] if student.student_number else 'N/A' }}">
+                                                <td>{{ student.name }}</td>
+                                                <td>{{ student.student_number }}</td>
+                                                <td>{{ student.email or 'N/A' }}</td>
+                                                <td>
+                                                    <span style="
+                                                        padding: 4px 8px;
+                                                        border-radius: 3px;
+                                                        font-size: 12px;
+                                                        font-weight: bold;
+                                                        {% if student.role == 'student' %}
+                                                            background-color: #E3F2FD;
+                                                            color: #1976D2;
+                                                        {% elif student.role == 'faculty' %}
+                                                            background-color: #F3E5F5;
+                                                            color: #7B1FA2;
+                                                        {% elif student.role == 'coordinator' %}
+                                                            background-color: #FFF3E0;
+                                                            color: #E65100;
+                                                        {% endif %}
+                                                    ">
+                                                        {{ student.role | title }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if student.is_active %}
+                                                        <span style="color: #4CAF50; font-weight: bold;">✓ Active</span>
+                                                    {% else %}
+                                                        <span style="color: #f44336; font-weight: bold;">✗ Deactivated</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ student.student_number[:4] if student.student_number else 'N/A' }}</td>
+                                                <td class="row-actions">
+                                                    <button
+                                                        type="button"
+                                                        class="edit-link edit-access-button"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#modifyAccessModal"
+                                                        data-student-id="{{ student.id }}"
+                                                        data-student-name='{{ student.name|tojson }}'
+                                                        data-student-role='{{ student.role|tojson }}'
+                                                        data-student-permissions='{{ student.permissions|map(attribute='name')|list|tojson }}'>
+                                                        Edit Access
+                                                    </button>
+                                                    <form method="post" action="{{ url_for('main.toggle_user_status', user_type='student', user_id=student.id) }}" style="display: inline;">
+                                                        {% if student.is_active %}
+                                                            <button class="delete-button" type="submit" onclick="return confirm('Deactivate this student account? They will not be able to log in.');">Deactivate</button>
+                                                        {% else %}
+                                                            <button class="edit-link" type="submit" onclick="return confirm('Reactivate this student account?');">Reactivate</button>
+                                                        {% endif %}
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>No student accounts found.</p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <section class="panel help-panel">
+                <h2>Account Deactivation Policy</h2>
+                <ul>
+                    <li><strong>Soft Delete:</strong> Deactivating accounts removes access without deleting data—perfect for compliance and audit trails.</li>
+                    <li><strong>Prevents Login:</strong> Deactivated students will see an error message when attempting to log in.</li>
+                    <li><strong>Records Preserved:</strong> All submissions and documents remain in the system for historical records.</li>
+                    <li><strong>Reactivation:</strong> You can reactivate accounts at any time to restore access.</li>
+                </ul>
+            </section>
+        </main>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function populateStudentModal(userId, studentName, role, permissions) {
-            // Set the hidden student id so the server knows which student to update
-            document.getElementById('modalStudentId').value = userId;
-            
-            // Populate basic fields
-            document.getElementById('modalStudentName').value = studentName;
-            document.getElementById('modalStudentRole').value = role;
-            
-            // Clear all checkboxes first
-            const checkboxes = document.querySelectorAll('input[name="permissions"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            
-            // Check the student's current permissions
-            if (Array.isArray(permissions) && permissions.length > 0) {
-                permissions.forEach(perm => {
-                    const checkbox = document.querySelector(`input[name="permissions"][value="${perm}"]`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                    }
-                });
-            }
-        }
+<script>
+function filterStudents() {
+    const selectedYear = document.getElementById("yearFilter").value;
+    const rows = document.querySelectorAll(".student-row");
 
-        document.querySelectorAll('.edit-access-button').forEach(button => {
-            button.addEventListener('click', function () {
-                const studentId = this.dataset.studentId;
-                const studentName = JSON.parse(this.dataset.studentName || '""');
-                const role = JSON.parse(this.dataset.studentRole || '""');
-                const permissions = JSON.parse(this.dataset.studentPermissions || '[]');
-
-                populateStudentModal(studentId, studentName, role, permissions);
-            });
-        });
-
-        const toggle = document.getElementById('theme-toggle');
-        const currentTheme = localStorage.getItem('moa-theme');
-        const body = document.body;
-
-        if (currentTheme === 'dark') {
-            body.classList.add('dark-mode');
-            toggle.textContent = 'Light Mode';
+    rows.forEach(row => {
+        const rowYear = row.getAttribute("data-year");
+        if (selectedYear === "all" || rowYear === selectedYear) {
+            row.style.display = ""; 
         } else {
-            body.classList.remove('dark-mode');
-            toggle.textContent = 'Dark Mode';
+            row.style.display = "none"; 
         }
-
-        if (toggle) {
-            toggle.addEventListener('click', function () {
-                const enabled = body.classList.toggle('dark-mode');
-                localStorage.setItem('moa-theme', enabled ? 'dark' : 'light');
-                toggle.textContent = enabled ? 'Light Mode' : 'Dark Mode';
-            });
-        }
-
-        const sectionFilters = document.querySelectorAll('.section-filter');
-        const sectionBlocks = document.querySelectorAll('.section-block');
-
-        function showSection(sectionId) {
-            sectionBlocks.forEach(block => {
-                if (sectionId === 'all' || block.id === 'section-' + sectionId) {
-                    block.style.display = '';
-                } else {
-                    block.style.display = 'none';
-                }
-            });
-        }
-
-        sectionFilters.forEach(button => {
-            button.addEventListener('click', function () {
-                sectionFilters.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                const section = this.dataset.section;
-                showSection(section);
-            });
-        });
-    </script>
+    });
+}
+</script>
 </body>
 </html>
