@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate, upgrade
 from config import Config
+from sqlalchemy import text # Add this
 
 # Setup logging to see errors without crashing
 logging.basicConfig(level=logging.INFO)
@@ -30,10 +31,14 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'main.admin_login'
 
-    # 3. Safe self-healing block
+    # Force self-healing database initialization
     with app.app_context():
         try:
-            # Force add missing columns that are causing your 500 errors
+            # 1. Ensure all tables exist (the proper way)
+            db.create_all() 
+            logger.info("Tables checked/created.")
+
+            # 2. Add columns if missing
             columns_to_ensure = [
                 ("students", "enrollment_year", "VARCHAR(4)"),
                 ("students", "username", "VARCHAR(80)"),
@@ -45,12 +50,12 @@ def create_app():
                 try:
                     db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type};"))
                 except Exception:
-                    pass # Column likely already exists
+                    pass 
             db.session.commit()
             logger.info("Database schema synchronized.")
         except Exception as e:
             db.session.rollback()
-            logger.warning(f"Manual sync failed: {e}")
+            logger.error(f"Critical Database failure: {e}")
 
     from app.routes import main_bp
     app.register_blueprint(main_bp)
