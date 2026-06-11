@@ -30,16 +30,27 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'main.admin_login'
 
-    # The Bulletproof Block
+    # 3. Safe self-healing block
     with app.app_context():
         try:
-            # We skip upgrade() on Render to avoid the transaction crash
-            # Only run this locally if you have shell access
-            if os.environ.get('RENDER') is None:
-                upgrade()
-            logger.info("Database initialized.")
+            # Force add missing columns that are causing your 500 errors
+            columns_to_ensure = [
+                ("students", "enrollment_year", "VARCHAR(4)"),
+                ("students", "username", "VARCHAR(80)"),
+                ("student_records", "has_medical_cert", "BOOLEAN DEFAULT FALSE"),
+                ("student_records", "hours_required", "INTEGER DEFAULT 486"),
+                ("student_records", "hours_rendered", "INTEGER DEFAULT 0")
+            ]
+            for table, col, col_type in columns_to_ensure:
+                try:
+                    db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type};"))
+                except Exception:
+                    pass # Column likely already exists
+            db.session.commit()
+            logger.info("Database schema synchronized.")
         except Exception as e:
-            logger.warning(f"Database sync skipped: {e}")
+            db.session.rollback()
+            logger.warning(f"Manual sync failed: {e}")
 
     from app.routes import main_bp
     app.register_blueprint(main_bp)

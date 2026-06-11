@@ -67,7 +67,7 @@ class Student(UserMixin, db.Model):
     attendance_logs = db.relationship('Attendance', backref='student_owner', lazy=True, cascade="all, delete-orphan")
 
     # Change your existing relationship to this:
-    permissions = db.relationship('Permission', secondary=user_permissions, overlaps="permissions,users")
+    permissions = db.relationship('Permission', secondary=user_permissions, overlaps="students")
 
     def get_id(self):
         return f"student_{self.id}"
