@@ -2,31 +2,39 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from sqlalchemy import text
 from config import Config
+from flask_migrate import Migrate, upgrade # 1. Import Migrate AND upgrade
 
 db = SQLAlchemy()
 login_manager = LoginManager()
+migrate = Migrate() # 2. Create the migrate object
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-123')
     
-    # Handle database connection string
+    # 1. Handle database connection string
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///local.db')
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Initialize extensions
+    # 2. Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db) # 4. Attach Migrate to the app and db
     login_manager.init_app(app)
-    login_manager.login_view = 'main.admin_login'
 
-    # Register Blueprints
+    # 3. Handle migrations on startup
+    with app.app_context():
+        try:
+            # This automatically applies your migration files
+            upgrade()
+        except Exception as e:
+            print(f"Database migration failed: {e}")
+
+    # 4. Register Blueprints and User Loader
     from app.routes import main_bp
     app.register_blueprint(main_bp)
 
@@ -41,28 +49,8 @@ def create_app():
             return Student.query.get(actual_id)
         return None
 
-    # Application Context Configuration
+    # 5. Core Permissions Auto-Seeding (Safe to keep)
     with app.app_context():
-        try:
-            db.create_all()
-            
-            # Synchronize schema to ensure all columns exist
-            db.session.execute(text("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(256);"))
-            db.session.execute(text("ALTER TABLE students ALTER COLUMN password_hash TYPE VARCHAR(256);"))
-            db.session.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS username VARCHAR(80);"))
-            db.session.execute(text("ALTER TABLE student_records ADD COLUMN IF NOT EXISTS has_medical_cert BOOLEAN DEFAULT FALSE;"))
-            db.session.execute(text("ALTER TABLE student_records ADD COLUMN IF NOT EXISTS hours_required INTEGER DEFAULT 486;"))
-            db.session.execute(text("ALTER TABLE student_records ADD COLUMN IF NOT EXISTS hours_rendered INTEGER DEFAULT 0;"))
-            db.session.execute(text("ALTER TABLE student_records ADD COLUMN IF NOT EXISTS name VARCHAR(150);"))
-            db.session.execute(text("ALTER TABLE student_records ADD COLUMN IF NOT EXISTS status VARCHAR(50);"))
-            db.session.execute(text("ALTER TABLE student_records ADD COLUMN IF NOT EXISTS year_section VARCHAR(50);"))
-            
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Schema synchronization bypass: {e}")
-
-        # Core Permissions Auto-Seeding
         from app.models import Permission
         permissions_list = [
             ('can_deactivate_users', 'Grants power to enable/disable user accounts.'),
@@ -74,7 +62,6 @@ def create_app():
             ('can_view_logs', 'Allows viewing history of who modified system data.'),
             ('can_bypass_deadlines', 'Allows manually extending OJT tracking deadlines.')
         ]
-        
         try:
             for name, desc in permissions_list:
                 if not Permission.query.filter_by(name=name).first():
