@@ -899,7 +899,24 @@ def admin_manage_students():
     # We take the first 4 characters of the student_number
     all_years = sorted(list({s.student_number[:4] for s in Student.query.all() if s.student_number}))
 
-    # 5. Group by section
+    # 5. Group by year and section
+    grouped_by_year = defaultdict(lambda: defaultdict(list))
+    for student in students:
+        year_key = student.student_number[:4] if student.student_number else "N/A"
+        section_key = normalize_year_section(student.year_section)
+        grouped_by_year[year_key][section_key].append(student)
+
+    year_section_groups = []
+    for year_key in sorted(grouped_by_year.keys(), key=lambda item: item.lower() if item != "N/A" else "", reverse=True):
+        ordered_sections = sorted(grouped_by_year[year_key].items(), key=lambda item: item[0].lower())
+        year_section_groups.append((year_key, ordered_sections))
+
+    if selected_year:
+        year_section_groups = [
+            (year_key, sections) for year_key, sections in year_section_groups if year_key == selected_year
+        ]
+
+    # Keep the older section-group structure for compatibility with any other UI logic
     section_groups = defaultdict(list)
     for student in students:
         section_key = normalize_year_section(student.year_section)
@@ -910,6 +927,7 @@ def admin_manage_students():
     return render_template(
         "manage_students.html",
         section_groups=ordered_section_groups,
+        year_section_groups=year_section_groups,
         available_years=all_years,
         selected_year=selected_year
     )

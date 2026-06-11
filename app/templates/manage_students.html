@@ -52,47 +52,70 @@
                 <section class="panel">
                     <div class="panel-header">
                         <h2>Student Accounts</h2>
-                        <select id="yearFilter" onchange="applyFilters()" class="form-select" style="width: auto;">
-                            <option value="all">All Years</option>
-                            {% for year in available_years %}
-                                <option value="{{ year }}">{{ year }}</option>
-                            {% endfor %}
-                        </select>
+                        <form method="get" class="d-flex align-items-center gap-2">
+                            <label for="yearFilter" class="form-label mb-0">Year</label>
+                            <select id="yearFilter" name="year" onchange="this.form.submit()" class="form-select" style="width: auto;">
+                                <option value="" {% if not selected_year %}selected{% endif %}>All Years</option>
+                                {% for year in available_years %}
+                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
                     </div>
 
-                    {% if section_groups %}
-                        {% for section, students in section_groups %}
-                            {% set section_id = section|replace(' ', '_')|replace('/', '-')|replace('\\', '-')|replace('.', '-')|lower %}
-                            <div class="section-block" id="section-{{ section_id }}" data-section="{{ section_id }}">
-                                <div class="section-header">
-                                    <h3>{{ section }}</h3>
-                                </div>
-                                <div class="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Number</th>
-                                                <th>Status</th>
-                                                <th>Year</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for student in students %}
-                                                <tr class="student-row" data-year="{{ student.student_number[:4] if student.student_number else 'N/A' }}" data-section="{{ section_id }}">
-                                                    <td>{{ student.name }}</td>
-                                                    <td>{{ student.student_number }}</td>
-                                                    <td>{{ 'Active' if student.is_active else 'Deactivated' }}</td>
-                                                    <td>{{ student.student_number[:4] if student.student_number else 'N/A' }}</td>
-                                                    <td>Action buttons...</td>
-                                                </tr>
+                    {% if year_section_groups %}
+                        <div class="accordion" id="yearAccordion">
+                            {% for year, sections in year_section_groups %}
+                                {% set year_id = year|replace(' ', '_')|replace('/', '-')|replace('\\', '-')|replace('.', '-')|lower %}
+                                <div class="accordion-item">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button {% if selected_year and selected_year != year %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#year-{{ year_id }}" aria-expanded="{{ 'true' if (selected_year == year or not selected_year) else 'false' }}">
+                                            <span class="fw-semibold">{{ year }}</span>
+                                            <span class="ms-2 text-muted">({{ sections|length }} section{% if sections|length != 1 %}s{% endif %})</span>
+                                        </button>
+                                    </h3>
+                                    <div id="year-{{ year_id }}" class="accordion-collapse collapse {% if selected_year == year or not selected_year %}show{% endif %}">
+                                        <div class="accordion-body">
+                                            {% for section, students in sections %}
+                                                {% set section_id = section|replace(' ', '_')|replace('/', '-')|replace('\\', '-')|replace('.', '-')|lower %}
+                                                <div class="section-block mb-4" id="section-{{ section_id }}" data-section="{{ section_id }}" data-year="{{ year }}">
+                                                    <div class="section-header d-flex justify-content-between align-items-center">
+                                                        <h4>{{ section }}</h4>
+                                                        <span class="text-muted">{{ students|length }} student{% if students|length != 1 %}s{% endif %}</span>
+                                                    </div>
+                                                    <div class="table-wrap">
+                                                        <table>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Name</th>
+                                                                    <th>Number</th>
+                                                                    <th>Status</th>
+                                                                    <th>Year</th>
+                                                                    <th>Actions</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for student in students %}
+                                                                    <tr class="student-row" data-year="{{ student.student_number[:4] if student.student_number else 'N/A' }}" data-section="{{ section_id }}">
+                                                                        <td>{{ student.name }}</td>
+                                                                        <td>{{ student.student_number }}</td>
+                                                                        <td>{{ 'Active' if student.is_active else 'Deactivated' }}</td>
+                                                                        <td>{{ student.student_number[:4] if student.student_number else 'N/A' }}</td>
+                                                                        <td>Action buttons...</td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             {% endfor %}
-                                        </tbody>
-                                    </table>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        {% endfor %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">No students found for the selected year.</div>
                     {% endif %}
                 </section>
             </main>
