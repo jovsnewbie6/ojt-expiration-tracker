@@ -143,25 +143,33 @@
                         <h2>Attendance Records</h2>
                     </div>
 
-                    <!-- Controls -->
                     <div class="attendance-controls">
-                        <div class="year-filter">
-                            <label>Filter by Year:</label>
-                            <form method="get" style="display: grid; grid-template-columns: 1fr auto; gap: 8px;">
+                        <form method="get" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: end;">
+        
+                            <div class="year-filter">
+                                <label>Filter by Year:</label>
                                 <select name="year" onchange="this.form.submit()">
                                     <option value="">All Years</option>
                                     {% for year in years %}
                                         <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
                                     {% endfor %}
                                 </select>
-                            </form>
-                        </div>
-                        
-                        <div></div><!-- Spacer -->
-                        
-                        <a href="{{ url_for('main.admin_attendance_export', year=selected_year) }}" class="btn-export">
-                            📥 Export Excel
-                        </a>
+                            </div>
+        
+                            <div class="year-filter">
+                                <label>Filter by Section:</label>
+                                <select name="section" onchange="this.form.submit()">
+                                    <option value="">All Sections</option>
+                                    {% for section in sections %}
+                                        <option value="{{ section }}" {% if section == selected_section %}selected{% endif %}>{{ section }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <a href="{{ url_for('main.admin_attendance_export', year=selected_year, section=selected_section) }}" class="btn-export">
+                                📥 Export Excel
+                            </a>
+                        </form>
                     </div>
 
                     <!-- Records Table -->

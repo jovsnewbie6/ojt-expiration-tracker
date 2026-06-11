@@ -1293,29 +1293,37 @@ def student_attendance_export():
         return redirect(url_for("main.student_attendance"))
 
 
-@main_bp.route("/admin/attendance")
-@login_required
+@main_bp.route("/admin/attendance", methods=["GET"])
 @admin_required
 def admin_attendance():
-    """Admin attendance view with year filter"""
-    from app.models import Attendance
+    from app.models import Attendance, Student
     
-    # Get selected year from query params
-    selected_year = request.args.get("year", "").strip()
+    year = request.args.get("year")
+    section = request.args.get("section")
     
-    # Get all unique years from attendance records
-    all_records = Attendance.query.all()
-    years = sorted(set([str(r.attendance_date.year) for r in all_records]), reverse=True)
+    # Join Attendance with Student to access Student.year_section
+    query = Attendance.query.join(Student, Attendance.student_id == Student.id)
     
-    # Filter by year if selected
-    if selected_year:
-        records = Attendance.query.filter(
-            db.extract('year', Attendance.attendance_date) == int(selected_year)
-        ).order_by(Attendance.attendance_date.desc(), Attendance.attendance_time.desc()).all()
-    else:
-        records = Attendance.query.order_by(Attendance.attendance_date.desc(), Attendance.attendance_time.desc()).all()
+    if year:
+        query = query.filter(db.extract('year', Attendance.attendance_date) == int(year))
     
-    return render_template("admin_attendance.html", records=records, years=years, selected_year=selected_year)
+    if section:
+        # Accessing the section from the joined Student model
+        query = query.filter(Student.year_section == section)
+        
+    records = query.order_by(Attendance.attendance_date.desc()).all()
+    
+    # Generate filter lists
+    years = sorted({str(r.attendance_date.year) for r in Attendance.query.all()}, reverse=True)
+    # Get distinct sections from the Student model
+    sections = sorted({s.year_section for s in Student.query.all() if s.year_section})
+    
+    return render_template("admin_attendance.html", 
+                           records=records, 
+                           years=years, 
+                           sections=sections,
+                           selected_year=year,
+                           selected_section=section)
 
 
 @main_bp.route("/admin/attendance/export")
@@ -1330,6 +1338,7 @@ def admin_attendance_export():
         
         # Get filter year if any
         selected_year = request.args.get("year", "").strip()
+        selected_section = request.args.get("section", "").strip()
         
         if selected_year:
             records = Attendance.query.filter(
