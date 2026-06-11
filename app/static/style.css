@@ -897,3 +897,23 @@ body.dark-mode .delete-button {
     background-color: #f3f4f6;
     z-index: 10;
 }
+/* Container to limit height and enable scrolling */
+.table-wrap {
+    max-height: 450px;       /* Sets the visible window height */
+    overflow-y: auto;        /* Adds the scrollbar when needed */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    margin-bottom: 20px;
+    position: relative;      /* Required for sticky headers to work */
+}
+
+/* Keeps the table headers pinned to the top while scrolling */
+.table-wrap thead th {
+    position: sticky;
+    top: 0;
+    background: #3d1222;     /* Dark background for visibility */
+    color: #f5e7d8;          /* Light text for contrast */
+    z-index: 10;             /* Ensures headers stay above the rows */
+    padding: 12px;
+}
