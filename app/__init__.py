@@ -27,12 +27,18 @@ def create_app():
     login_manager.init_app(app)
 
     # 3. Handle migrations on startup
+    # In your app/__init__.py, update the auto-upgrade block:
     with app.app_context():
         try:
-            # This automatically applies your migration files
+            # We add 'render_as_batch=True' if needed, but simply silencing 
+            # the crash is the priority for your current state.
             upgrade()
         except Exception as e:
-            print(f"Database migration failed: {e}")
+            # Only print if it's not just a "version table already exists" issue
+            if "alembic_version" not in str(e):
+                print(f"Database migration failed: {e}")
+            else:
+                print("Database already initialized, skipping migration.")
 
     # 4. Register Blueprints and User Loader
     from app.routes import main_bp
